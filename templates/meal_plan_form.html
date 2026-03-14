@@ -7,7 +7,7 @@
 </div>
 
 <form method="post" id="plan-form">
-    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="form-grid">
         <div class="form-group">
             <label for="name">Plan Name *</label>
             <input type="text" id="name" name="name" value="{{ plan.name if plan else '' }}" required>
@@ -18,6 +18,14 @@
                 <option value="weekly" {{ 'selected' if not plan or plan.plan_type == 'weekly' }}>Weekly Plan</option>
                 <option value="event" {{ 'selected' if plan and plan.plan_type == 'event' }}>Event Menu</option>
             </select>
+        </div>
+        <div class="form-group" id="event-date-group">
+            <label for="event-date">Event Date</label>
+            <input type="date" id="event-date" name="event_date" value="{{ plan.event_date if plan and plan.event_date else '' }}">
+        </div>
+        <div class="form-group" id="event-time-group">
+            <label for="event-time">Event Time</label>
+            <input type="time" id="event-time" name="event_time" value="{{ plan.event_time if plan and plan.event_time else '' }}">
         </div>
     </div>
 
@@ -52,6 +60,7 @@
                                 >{{ r.title }}</option>
                                 {% endfor %}
                             </select>
+                            <input type="hidden" name="free_text" value="" class="weekly-slot">
                             <input type="number" name="servings_override" placeholder="Svg" min="1"
                                    class="weekly-slot" style="width: 70px; margin-top: 4px;"
                                    {% for item in items if item.slot_label == slot %}
@@ -68,70 +77,172 @@
 
     <!-- Event Menu -->
     <div id="event-section" style="display:none">
-        <h3>Courses</h3>
-        <div id="event-items">
+        {% for course in courses %}
+        <div class="event-category" data-category="{{ course }}">
+            <h3>{{ course }}</h3>
+            <div class="event-category-items" id="cat-{{ course|lower }}">
+                {% if plan and plan.plan_type == 'event' %}
+                    {% for item in items if item.slot_label == course %}
+                    <div class="event-item-row">
+                        <input type="hidden" name="slot_label" value="{{ course }}" class="event-slot">
+                        <select name="recipe_id" class="event-slot">
+                            <option value="">— Pick a recipe —</option>
+                            {% for r in recipes %}
+                            <option value="{{ r.id }}" {{ 'selected' if item.recipe_id and r.id == item.recipe_id }}>{{ r.title }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="event-or">or</span>
+                        <input type="text" name="free_text" value="{{ item.free_text or '' }}" placeholder="Type a dish name" class="event-slot">
+                        <input type="number" name="servings_override" value="{{ item.servings_override or '' }}"
+                               placeholder="Servings" min="1" class="event-slot" style="width:90px;">
+                        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">&#215;</button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <button type="button" class="btn btn-outline" style="font-size:0.8rem; padding:0.3rem 0.8rem; margin-top:0.5rem;"
+                    onclick="addEventItem('{{ course }}')">+ Add to {{ course }}</button>
+        </div>
+        {% endfor %}
+
+        <hr>
+        <h3>Custom Category</h3>
+        <div id="custom-categories">
             {% if plan and plan.plan_type == 'event' %}
+                {% set seen_cats = [] %}
                 {% for item in items %}
-                <div class="form-row event-row" style="margin-bottom:0.5rem;">
-                    <input type="text" name="slot_label" value="{{ item.slot_label }}" placeholder="Course label" class="event-slot">
-                    <select name="recipe_id" class="event-slot">
-                        <option value="">—</option>
-                        {% for r in recipes %}
-                        <option value="{{ r.id }}" {{ 'selected' if r.id == item.recipe_id }}>{{ r.title }}</option>
+                    {% if item.slot_label not in courses and item.slot_label not in seen_cats %}
+                        {% if seen_cats.append(item.slot_label) %}{% endif %}
+                    {% endif %}
+                {% endfor %}
+                {% for cat in seen_cats %}
+                <div class="event-custom-category">
+                    <div class="form-group">
+                        <input type="text" class="custom-cat-name" value="{{ cat }}" placeholder="Category name" style="font-weight:500; margin-bottom:0.5rem;">
+                    </div>
+                    <div class="event-category-items" id="cat-custom-{{ loop.index }}">
+                        {% for item in items if item.slot_label == cat %}
+                        <div class="event-item-row">
+                            <input type="hidden" name="slot_label" value="{{ cat }}" class="event-slot custom-slot">
+                            <select name="recipe_id" class="event-slot">
+                                <option value="">— Pick a recipe —</option>
+                                {% for r in recipes %}
+                                <option value="{{ r.id }}" {{ 'selected' if item.recipe_id and r.id == item.recipe_id }}>{{ r.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <span class="event-or">or</span>
+                            <input type="text" name="free_text" value="{{ item.free_text or '' }}" placeholder="Type a dish name" class="event-slot">
+                            <input type="number" name="servings_override" value="{{ item.servings_override or '' }}"
+                                   placeholder="Servings" min="1" class="event-slot" style="width:90px;">
+                            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">&#215;</button>
+                        </div>
                         {% endfor %}
-                    </select>
-                    <input type="number" name="servings_override" value="{{ item.servings_override or '' }}"
-                           placeholder="Servings" min="1" class="event-slot">
+                    </div>
+                    <button type="button" class="btn btn-outline" style="font-size:0.8rem; padding:0.3rem 0.8rem; margin-top:0.5rem;"
+                            onclick="addCustomItem(this)">+ Add Item</button>
                 </div>
                 {% endfor %}
             {% endif %}
         </div>
-        <button type="button" class="btn btn-outline" onclick="addEventRow()">+ Add Course Item</button>
+        <button type="button" class="btn btn-outline" onclick="addCustomCategory()">+ Add Custom Category</button>
     </div>
 
     <div class="form-actions">
         <button type="submit">Save Plan</button>
-        <a href="{{ url_for('plan_list') }}" class="btn btn-outline">Cancel</a>
+        {% if plan and plan.plan_type == 'event' %}
+        <a href="{{ url_for('event_plan_list') }}" class="btn btn-outline">Cancel</a>
+        {% else %}
+        <a href="{{ url_for('meal_plan_list') }}" class="btn btn-outline">Cancel</a>
+        {% endif %}
     </div>
 </form>
 
 <script>
-const recipes = {{ recipes|map(attribute='id')|list|tojson }};
+const recipeIds = {{ recipes|map(attribute='id')|list|tojson }};
 const recipeTitles = {{ recipes|map(attribute='title')|list|tojson }};
+
+function makeRecipeOptions() {
+    let opts = '<option value="">— Pick a recipe —</option>';
+    for (let i = 0; i < recipeIds.length; i++) {
+        opts += `<option value="${recipeIds[i]}">${recipeTitles[i]}</option>`;
+    }
+    return opts;
+}
+
+function makeItemRow(category) {
+    return `
+        <div class="event-item-row">
+            <input type="hidden" name="slot_label" value="${category}" class="event-slot">
+            <select name="recipe_id" class="event-slot">${makeRecipeOptions()}</select>
+            <span class="event-or">or</span>
+            <input type="text" name="free_text" placeholder="Type a dish name" class="event-slot">
+            <input type="number" name="servings_override" placeholder="Servings" min="1" class="event-slot" style="width:90px;">
+            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">&#215;</button>
+        </div>`;
+}
+
+function addEventItem(category) {
+    const container = document.getElementById('cat-' + category.toLowerCase());
+    container.insertAdjacentHTML('beforeend', makeItemRow(category));
+}
+
+function addCustomItem(btn) {
+    const wrapper = btn.parentElement;
+    const catName = wrapper.querySelector('.custom-cat-name').value || 'Custom';
+    const container = wrapper.querySelector('.event-category-items');
+    container.insertAdjacentHTML('beforeend', makeItemRow(catName));
+}
+
+function addCustomCategory() {
+    const container = document.getElementById('custom-categories');
+    const idx = container.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'event-custom-category';
+    div.innerHTML = `
+        <div class="form-group">
+            <input type="text" class="custom-cat-name" placeholder="Category name (e.g., Cheese Board)" style="font-weight:500; margin-bottom:0.5rem;">
+        </div>
+        <div class="event-category-items"></div>
+        <button type="button" class="btn btn-outline" style="font-size:0.8rem; padding:0.3rem 0.8rem; margin-top:0.5rem;"
+                onclick="addCustomItem(this)">+ Add Item</button>
+    `;
+    container.appendChild(div);
+    // Add one item row by default
+    addCustomItem(div.querySelector('button'));
+}
+
+// When form submits, update custom slot_label hidden fields to match the category name input
+document.getElementById('plan-form').addEventListener('submit', function() {
+    document.querySelectorAll('.event-custom-category').forEach(wrapper => {
+        const catName = wrapper.querySelector('.custom-cat-name').value || 'Custom';
+        wrapper.querySelectorAll('input[name="slot_label"]').forEach(input => {
+            input.value = catName;
+        });
+    });
+});
 
 function togglePlanType() {
     const type = document.getElementById('plan-type').value;
     const weekly = document.getElementById('weekly-section');
     const event = document.getElementById('event-section');
 
+    const dateGroup = document.getElementById('event-date-group');
+    const timeGroup = document.getElementById('event-time-group');
     if (type === 'weekly') {
         weekly.style.display = '';
         event.style.display = 'none';
+        dateGroup.style.display = 'none';
+        timeGroup.style.display = 'none';
         weekly.querySelectorAll('.weekly-slot').forEach(el => el.disabled = false);
         event.querySelectorAll('.event-slot').forEach(el => el.disabled = true);
     } else {
         weekly.style.display = 'none';
         event.style.display = '';
+        dateGroup.style.display = '';
+        timeGroup.style.display = '';
         weekly.querySelectorAll('.weekly-slot').forEach(el => el.disabled = true);
         event.querySelectorAll('.event-slot').forEach(el => el.disabled = false);
     }
-}
-
-function addEventRow() {
-    const container = document.getElementById('event-items');
-    const div = document.createElement('div');
-    div.className = 'form-row event-row';
-    div.style.marginBottom = '0.5rem';
-    let options = '<option value="">—</option>';
-    for (let i = 0; i < recipes.length; i++) {
-        options += `<option value="${recipes[i]}">${recipeTitles[i]}</option>`;
-    }
-    div.innerHTML = `
-        <input type="text" name="slot_label" placeholder="Course label (e.g., Appetizer)" class="event-slot">
-        <select name="recipe_id" class="event-slot">${options}</select>
-        <input type="number" name="servings_override" placeholder="Servings" min="1" class="event-slot">
-    `;
-    container.appendChild(div);
 }
 
 togglePlanType();

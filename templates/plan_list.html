@@ -16,11 +16,21 @@
         <a href="{{ url_for('plan_detail', plan_id=plan.id) }}">
             <strong>{{ plan.name }}</strong>
         </a>
-        <small class="muted">Created {{ plan.created_at }}</small>
+        <small class="muted">
+            {% if plan.event_date %}{{ plan|event_datetime }}{% else %}Created {{ plan.created_at }}{% endif %}
+        </small>
+        {% if plan_stats and plan.id in plan_stats %}
+        <small class="muted">
+            {{ plan_stats[plan.id].total }} invited &middot; {{ plan_stats[plan.id].attending }} attending
+        </small>
+        {% endif %}
     </div>
     <div class="plan-card-actions">
         <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit</a>
         <a href="{{ url_for('grocery_list', plan_id=plan.id) }}">Grocery List</a>
+        <form method="post" action="{{ url_for('plan_delete', plan_id=plan.id) }}" style="display:inline">
+            <button type="submit" class="btn-remove" onclick="return confirm('Delete this plan?')">&#215;</button>
+        </form>
     </div>
 </article>
 {% endfor %}

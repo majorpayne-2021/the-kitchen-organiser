@@ -57,18 +57,49 @@ CREATE TABLE IF NOT EXISTS meal_plan (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     plan_type TEXT NOT NULL DEFAULT 'weekly',  -- 'weekly' or 'event'
+    event_date TEXT,  -- date for event plans
+    event_time TEXT,  -- time for event plans (HH:MM)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS meal_plan_item (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     meal_plan_id INTEGER NOT NULL,
-    recipe_id INTEGER NOT NULL,
-    slot_label TEXT NOT NULL,     -- e.g. 'Monday Dinner' or 'Appetizer'
+    recipe_id INTEGER,           -- NULL for free-text items
+    free_text TEXT,              -- free-text item name (when no recipe linked)
+    slot_label TEXT NOT NULL,     -- e.g. 'Monday Dinner' or 'Savoury'
     servings_override INTEGER,
     sort_order INTEGER DEFAULT 0,
     FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE,
     FOREIGN KEY (recipe_id) REFERENCES recipe(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS event_note (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_plan_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS event_photo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_plan_id INTEGER NOT NULL,
+    filename TEXT NOT NULL,
+    caption TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS event_invitee (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_plan_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    invite_sent INTEGER DEFAULT 0,
+    rsvp TEXT DEFAULT 'pending',  -- 'pending', 'attending', 'not attending'
+    dietary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS gift_idea (

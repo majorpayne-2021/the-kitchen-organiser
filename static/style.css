@@ -224,6 +224,8 @@ footer {
 input[type="text"],
 input[type="number"],
 input[type="search"],
+input[type="date"],
+input[type="time"],
 textarea,
 select {
     font-family: var(--font-sans);
@@ -644,6 +646,112 @@ th {
 
 .table-responsive {
     overflow-x: auto;
+}
+
+/* ── Event Plan Form ──────────────────────────────────────────────────────── */
+
+.event-category {
+    margin-bottom: 2rem;
+}
+
+.event-item-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.event-item-row select {
+    flex: 1;
+}
+
+.event-item-row input[type="text"] {
+    flex: 1;
+}
+
+.event-or {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    font-style: italic;
+    flex-shrink: 0;
+}
+
+.event-custom-category {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-light);
+}
+
+/* ── Event Stats ──────────────────────────────────────────────────────────── */
+
+.event-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.event-stat {
+    text-align: center;
+    padding: 1rem 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+}
+
+.event-stat .card-number {
+    font-size: 2rem;
+}
+
+/* ── Event Menu Cards ─────────────────────────────────────────────────────── */
+
+.event-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.event-menu-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.event-menu-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+
+.event-menu-card-header {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    font-weight: 400;
+    padding: 1.2rem 1rem 0.8rem;
+    border-bottom: 1px solid var(--color-border-light);
+    color: var(--color-accent);
+    letter-spacing: 0.02em;
+}
+
+.event-menu-card ul {
+    list-style: none;
+    padding: 0.8rem 1.2rem 1.2rem;
+    margin: 0;
+}
+
+.event-menu-card ul li {
+    padding: 0.4rem 0;
+    font-size: 0.95rem;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.event-menu-card ul li:last-child {
+    border-bottom: none;
+}
+
+/* ── Invitees ─────────────────────────────────────────────────────────────── */
+
+.invitee-add-form {
+    margin-top: 1rem;
 }
 
 /* ── Gift Ideas ──────────────────────────────────────────────────────────── */

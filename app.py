@@ -77,6 +77,39 @@ def fromjson_filter(s):
         return []
 
 
+@app.template_filter('event_datetime')
+def event_datetime_filter(plan):
+    """Format event date and time nicely, e.g. 'Monday, 16th March 2026 at 3pm'."""
+    from datetime import datetime
+    if not plan['event_date']:
+        return ''
+    try:
+        dt = datetime.strptime(plan['event_date'], '%Y-%m-%d')
+    except (ValueError, TypeError):
+        return plan['event_date']
+
+    day = dt.day
+    if 11 <= day <= 13:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+
+    date_str = dt.strftime(f'%A, {day}{suffix} %B %Y')
+
+    if plan['event_time']:
+        try:
+            t = datetime.strptime(plan['event_time'], '%H:%M')
+            if t.minute == 0:
+                time_str = t.strftime('%I%p').lstrip('0').lower()
+            else:
+                time_str = t.strftime('%I:%M%p').lstrip('0').lower()
+            date_str += f' at {time_str}'
+        except (ValueError, TypeError):
+            date_str += f' at {plan["event_time"]}'
+
+    return date_str
+
+
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -454,7 +487,7 @@ def ingredient_search():
 
 WEEKLY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 WEEKLY_MEALS = ['Breakfast', 'Lunch', 'Dinner']
-EVENT_COURSES = ['Appetizer', 'Main', 'Side', 'Dessert', 'Drinks']
+EVENT_COURSES = ['Savoury', 'Salads', 'Sides', 'Sweet', 'Drinks']
 
 
 @app.route('/plans')
@@ -475,9 +508,23 @@ def meal_plan_list():
 @app.route('/event-plans')
 def event_plan_list():
     db = get_db()
-    plans = db.execute("SELECT * FROM meal_plan WHERE plan_type = 'event' ORDER BY created_at DESC").fetchall()
+    plans = db.execute("""
+        SELECT * FROM meal_plan WHERE plan_type = 'event'
+        ORDER BY CASE WHEN event_date IS NULL THEN 1 ELSE 0 END,
+                 event_date ASC, created_at DESC
+    """).fetchall()
+    # Attach invitee stats to each plan
+    plan_stats = {}
+    for plan in plans:
+        stats = db.execute('''
+            SELECT COUNT(*) as total,
+                   SUM(CASE WHEN rsvp = 'attending' THEN 1 ELSE 0 END) as attending
+            FROM event_invitee WHERE meal_plan_id = ?
+        ''', (plan['id'],)).fetchone()
+        plan_stats[plan['id']] = {'total': stats['total'], 'attending': stats['attending'] or 0}
     return render_template('plan_list.html', plans=plans, plan_type='event',
-                           page_title='Event Plans', page_subtitle='Hosting menus and events')
+                           page_title='Event Plans', page_subtitle='Hosting menus and events',
+                           plan_stats=plan_stats)
 
 
 @app.route('/plan/new', methods=['GET', 'POST'])
@@ -500,7 +547,7 @@ def plan_detail(plan_id):
     items = db.execute('''
         SELECT mpi.*, r.title AS recipe_title
         FROM meal_plan_item mpi
-        JOIN recipe r ON r.id = mpi.recipe_id
+        LEFT JOIN recipe r ON r.id = mpi.recipe_id
         WHERE mpi.meal_plan_id = ?
         ORDER BY mpi.sort_order
     ''', (plan_id,)).fetchall()
@@ -517,12 +564,33 @@ def plan_detail(plan_id):
         return render_template('meal_plan.html', plan=plan, grid=grid,
                                days=WEEKLY_DAYS, meals=WEEKLY_MEALS, items=items)
     else:
-        # Group by course label
-        courses = {}
+        # Group by category label
+        categories = {}
         for item in items:
             label = item['slot_label']
-            courses.setdefault(label, []).append(item)
-        return render_template('meal_plan.html', plan=plan, courses=courses, items=items)
+            categories.setdefault(label, []).append(item)
+        # Load event notes
+        event_notes = db.execute(
+            'SELECT * FROM event_note WHERE meal_plan_id = ? ORDER BY created_at DESC',
+            (plan_id,)
+        ).fetchall()
+        event_photos = db.execute(
+            'SELECT * FROM event_photo WHERE meal_plan_id = ? ORDER BY created_at',
+            (plan_id,)
+        ).fetchall()
+        invitees = db.execute(
+            'SELECT * FROM event_invitee WHERE meal_plan_id = ? ORDER BY name',
+            (plan_id,)
+        ).fetchall()
+        invitee_stats = {
+            'total': len(invitees),
+            'attending': sum(1 for i in invitees if i['rsvp'] == 'attending'),
+            'not_attending': sum(1 for i in invitees if i['rsvp'] == 'not attending'),
+            'pending': sum(1 for i in invitees if i['rsvp'] == 'pending'),
+        }
+        return render_template('meal_plan.html', plan=plan, categories=categories,
+                               items=items, event_notes=event_notes, invitees=invitees,
+                               invitee_stats=invitee_stats, event_photos=event_photos)
 
 
 @app.route('/plan/<int:plan_id>/edit', methods=['GET', 'POST'])
@@ -542,23 +610,33 @@ def plan_edit(plan_id):
     ''', (plan_id,)).fetchall()
     recipes = db.execute('SELECT id, title FROM recipe ORDER BY title').fetchall()
 
+    event_notes = db.execute(
+        'SELECT * FROM event_note WHERE meal_plan_id = ? ORDER BY created_at DESC',
+        (plan_id,)
+    ).fetchall()
     return render_template('meal_plan_form.html', plan=plan, items=items, recipes=recipes,
-                           days=WEEKLY_DAYS, meals=WEEKLY_MEALS, courses=EVENT_COURSES)
+                           days=WEEKLY_DAYS, meals=WEEKLY_MEALS, courses=EVENT_COURSES,
+                           event_notes=event_notes)
 
 
 @app.route('/plan/<int:plan_id>/delete', methods=['POST'])
 def plan_delete(plan_id):
     db = get_db()
+    plan = db.execute('SELECT plan_type FROM meal_plan WHERE id = ?', (plan_id,)).fetchone()
     db.execute('DELETE FROM meal_plan WHERE id = ?', (plan_id,))
     db.commit()
     flash('Plan deleted.')
-    return redirect(url_for('plan_list'))
+    if plan and plan['plan_type'] == 'event':
+        return redirect(url_for('event_plan_list'))
+    return redirect(url_for('meal_plan_list'))
 
 
 def save_plan(plan_id):
     db = get_db()
     name = request.form.get('name', '').strip()
     plan_type = request.form.get('plan_type', 'weekly')
+    event_date = request.form.get('event_date', '').strip() or None
+    event_time = request.form.get('event_time', '').strip() or None
 
     if not name:
         flash('Plan name is required.')
@@ -566,12 +644,13 @@ def save_plan(plan_id):
 
     if plan_id is None:
         cur = db.execute(
-            'INSERT INTO meal_plan (name, plan_type) VALUES (?, ?)', (name, plan_type)
+            'INSERT INTO meal_plan (name, plan_type, event_date, event_time) VALUES (?, ?, ?, ?)',
+            (name, plan_type, event_date, event_time)
         )
         plan_id = cur.lastrowid
     else:
-        db.execute('UPDATE meal_plan SET name = ?, plan_type = ? WHERE id = ?',
-                   (name, plan_type, plan_id))
+        db.execute('UPDATE meal_plan SET name = ?, plan_type = ?, event_date = ?, event_time = ? WHERE id = ?',
+                   (name, plan_type, event_date, event_time, plan_id))
 
     # Clear existing items and re-add
     db.execute('DELETE FROM meal_plan_item WHERE meal_plan_id = ?', (plan_id,))
@@ -579,26 +658,35 @@ def save_plan(plan_id):
     # Items come as parallel arrays
     slot_labels = request.form.getlist('slot_label')
     recipe_ids = request.form.getlist('recipe_id')
+    free_texts = request.form.getlist('free_text')
     servings_list = request.form.getlist('servings_override')
 
-    for i, (slot, rid) in enumerate(zip(slot_labels, recipe_ids)):
-        rid = rid.strip()
-        if not rid:
+    for i, slot in enumerate(slot_labels):
+        rid = recipe_ids[i].strip() if i < len(recipe_ids) else ''
+        free_text = free_texts[i].strip() if i < len(free_texts) else ''
+
+        # Skip rows with no recipe and no free text
+        if not rid and not free_text:
             continue
-        try:
-            rid = int(rid)
-        except ValueError:
-            continue
+
+        recipe_id = None
+        if rid:
+            try:
+                recipe_id = int(rid)
+            except ValueError:
+                pass
+
         servings = None
         if i < len(servings_list) and servings_list[i].strip():
             try:
                 servings = int(servings_list[i])
             except ValueError:
                 pass
+
         db.execute(
-            '''INSERT INTO meal_plan_item (meal_plan_id, recipe_id, slot_label, servings_override, sort_order)
-               VALUES (?, ?, ?, ?, ?)''',
-            (plan_id, rid, slot, servings, i)
+            '''INSERT INTO meal_plan_item (meal_plan_id, recipe_id, free_text, slot_label, servings_override, sort_order)
+               VALUES (?, ?, ?, ?, ?, ?)''',
+            (plan_id, recipe_id, free_text or None, slot, servings, i)
         )
 
     db.commit()
@@ -656,6 +744,139 @@ def api_recipes():
     else:
         recipes = db.execute('SELECT id, title FROM recipe ORDER BY title LIMIT 50').fetchall()
     return jsonify([{'id': r['id'], 'title': r['title']} for r in recipes])
+
+
+# ── Event Photos ──────────────────────────────────────────────────────────────
+
+@app.route('/plan/<int:plan_id>/photo', methods=['POST'])
+def event_photo_upload(plan_id):
+    db = get_db()
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        flash('No photo selected.')
+        return redirect(url_for('plan_detail', plan_id=plan_id))
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.gif', '.webp'):
+        flash('Unsupported image format.')
+        return redirect(url_for('plan_detail', plan_id=plan_id))
+
+    filename = f'event_{uuid.uuid4().hex}{ext}'
+    filepath = os.path.join(PHOTO_DIR, filename)
+    file.save(filepath)
+
+    try:
+        img = Image.open(filepath)
+        img = ImageOps.exif_transpose(img)
+        img.save(filepath)
+        thumb = img.copy()
+        thumb.thumbnail(THUMB_SIZE)
+        thumb.save(os.path.join(PHOTO_DIR, f'thumb_{filename}'))
+    except Exception:
+        pass
+
+    caption = request.form.get('caption', '').strip()
+    db.execute(
+        'INSERT INTO event_photo (meal_plan_id, filename, caption) VALUES (?, ?, ?)',
+        (plan_id, filename, caption or None)
+    )
+    db.commit()
+    flash('Photo uploaded!')
+    return redirect(url_for('plan_detail', plan_id=plan_id))
+
+
+@app.route('/event-photo/<int:photo_id>/delete', methods=['POST'])
+def event_photo_delete(photo_id):
+    db = get_db()
+    photo = db.execute('SELECT * FROM event_photo WHERE id = ?', (photo_id,)).fetchone()
+    if photo is None:
+        flash('Photo not found.')
+        return redirect(url_for('event_plan_list'))
+
+    for prefix in ('', 'thumb_'):
+        path = os.path.join(PHOTO_DIR, prefix + photo['filename'])
+        if os.path.exists(path):
+            os.remove(path)
+
+    db.execute('DELETE FROM event_photo WHERE id = ?', (photo_id,))
+    db.commit()
+    flash('Photo deleted.')
+    return redirect(url_for('plan_detail', plan_id=photo['meal_plan_id']))
+
+
+# ── Event Invitees ────────────────────────────────────────────────────────────
+
+@app.route('/plan/<int:plan_id>/invitee', methods=['POST'])
+def invitee_add(plan_id):
+    db = get_db()
+    name = request.form.get('name', '').strip()
+    dietary = request.form.get('dietary', '').strip()
+    if not name:
+        flash('Invitee name is required.')
+        return redirect(url_for('plan_detail', plan_id=plan_id))
+    db.execute(
+        'INSERT INTO event_invitee (meal_plan_id, name, dietary) VALUES (?, ?, ?)',
+        (plan_id, name, dietary or None)
+    )
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=plan_id))
+
+
+@app.route('/invitee/<int:invitee_id>/update', methods=['POST'])
+def invitee_update(invitee_id):
+    db = get_db()
+    invitee = db.execute('SELECT * FROM event_invitee WHERE id = ?', (invitee_id,)).fetchone()
+    if invitee is None:
+        flash('Invitee not found.')
+        return redirect(url_for('event_plan_list'))
+
+    invite_sent = 1 if request.form.get('invite_sent') else 0
+    rsvp = request.form.get('rsvp', 'pending')
+    dietary = request.form.get('dietary', '').strip()
+    db.execute(
+        'UPDATE event_invitee SET invite_sent = ?, rsvp = ?, dietary = ? WHERE id = ?',
+        (invite_sent, rsvp, dietary or None, invitee_id)
+    )
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=invitee['meal_plan_id']))
+
+
+@app.route('/invitee/<int:invitee_id>/delete', methods=['POST'])
+def invitee_delete(invitee_id):
+    db = get_db()
+    invitee = db.execute('SELECT * FROM event_invitee WHERE id = ?', (invitee_id,)).fetchone()
+    if invitee is None:
+        flash('Invitee not found.')
+        return redirect(url_for('event_plan_list'))
+    db.execute('DELETE FROM event_invitee WHERE id = ?', (invitee_id,))
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=invitee['meal_plan_id']))
+
+
+# ── Event Notes ───────────────────────────────────────────────────────────────
+
+@app.route('/plan/<int:plan_id>/event-note', methods=['POST'])
+def event_note_add(plan_id):
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Note cannot be empty.')
+        return redirect(url_for('plan_detail', plan_id=plan_id))
+    db = get_db()
+    db.execute('INSERT INTO event_note (meal_plan_id, content) VALUES (?, ?)', (plan_id, content))
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=plan_id))
+
+
+@app.route('/event-note/<int:note_id>/delete', methods=['POST'])
+def event_note_delete(note_id):
+    db = get_db()
+    note = db.execute('SELECT * FROM event_note WHERE id = ?', (note_id,)).fetchone()
+    if note is None:
+        flash('Note not found.')
+        return redirect(url_for('event_plan_list'))
+    db.execute('DELETE FROM event_note WHERE id = ?', (note_id,))
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=note['meal_plan_id']))
 
 
 # ── Gift Ideas ────────────────────────────────────────────────────────────────

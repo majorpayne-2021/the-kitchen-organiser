@@ -4,8 +4,29 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ plan.name }}</h1>
-    <p class="subtitle">{{ 'Weekly Plan' if plan.plan_type == 'weekly' else 'Event Menu' }}</p>
+    <p class="subtitle">{{ 'Weekly Plan' if plan.plan_type == 'weekly' else 'Event Menu' }}{% if plan.event_date %} &middot; {{ plan|event_datetime }}{% endif %}</p>
 </div>
+
+{% if plan.plan_type == 'event' and invitee_stats %}
+<div class="event-stats">
+    <div class="event-stat">
+        <span class="card-number">{{ invitee_stats.total }}</span>
+        <span class="card-label">Invited</span>
+    </div>
+    <div class="event-stat">
+        <span class="card-number">{{ invitee_stats.attending }}</span>
+        <span class="card-label">Attending</span>
+    </div>
+    <div class="event-stat">
+        <span class="card-number">{{ invitee_stats.not_attending }}</span>
+        <span class="card-label">Not Attending</span>
+    </div>
+    <div class="event-stat">
+        <span class="card-number">{{ invitee_stats.pending }}</span>
+        <span class="card-label">Pending</span>
+    </div>
+</div>
+{% endif %}
 
 <div class="recipe-actions">
     <a href="{{ url_for('plan_edit', plan_id=plan.id) }}" class="btn btn-outline">Edit</a>
@@ -35,8 +56,12 @@
                 {% for meal in meals %}
                 <td>
                     {% for item in grid[day][meal] %}
-                    <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
-                    {% if item.servings_override %}<br><small class="muted">({{ item.servings_override }} servings)</small>{% endif %}
+                        {% if item.recipe_id %}
+                        <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
+                        {% elif item.free_text %}
+                        <span>{{ item.free_text }}</span>
+                        {% endif %}
+                        {% if item.servings_override %}<br><small class="muted">({{ item.servings_override }} servings)</small>{% endif %}
                     {% else %}
                     <small class="muted">&mdash;</small>
                     {% endfor %}
@@ -49,20 +74,139 @@
 </div>
 
 {% else %}
-{% for course, course_items in courses.items() %}
-<h3>{{ course }}</h3>
-<ul>
-    {% for item in course_items %}
-    <li>
-        <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
-        {% if item.servings_override %}<small class="muted"> ({{ item.servings_override }} servings)</small>{% endif %}
-    </li>
+<!-- Event Menu by Category -->
+{% if categories %}
+<div class="event-menu-grid">
+    {% for category, cat_items in categories.items() %}
+    <div class="event-menu-card">
+        <div class="event-menu-card-header">{{ category }}</div>
+        <ul>
+            {% for item in cat_items %}
+            <li>
+                {% if item.recipe_id %}
+                <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
+                {% elif item.free_text %}
+                {{ item.free_text }}
+                {% endif %}
+                {% if item.servings_override %}<small class="muted"> ({{ item.servings_override }} servings)</small>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
     {% endfor %}
-</ul>
-{% endfor %}
+</div>
 {% endif %}
 
 {% if not items %}
-<p class="empty-state">No recipes assigned yet. <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit this plan</a> to add recipes.</p>
+<p class="empty-state">No items yet. <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit this plan</a> to add items.</p>
+{% endif %}
+
+<!-- Inspiration Photos -->
+<hr>
+<h3>Inspiration</h3>
+{% if event_photos %}
+<div class="photo-gallery">
+    {% for photo in event_photos %}
+    <figure>
+        <img src="{{ url_for('static', filename='photos/' + photo.filename) }}"
+             alt="{{ photo.caption or 'Inspiration' }}" loading="lazy">
+        {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+        <div class="photo-actions">
+            <form method="post" action="{{ url_for('event_photo_delete', photo_id=photo.id) }}" style="display:inline">
+                <button type="submit" class="btn-remove" onclick="return confirm('Delete this photo?')">Remove</button>
+            </form>
+        </div>
+    </figure>
+    {% endfor %}
+</div>
+{% endif %}
+
+<details>
+    <summary>Add Inspiration Photo</summary>
+    <form method="post" action="{{ url_for('event_photo_upload', plan_id=plan.id) }}" enctype="multipart/form-data">
+        <div class="form-group" style="display:flex; gap:1rem; align-items:flex-end;">
+            <input type="file" name="photo" accept="image/*" required>
+            <input type="text" name="caption" placeholder="Caption (optional)">
+            <button type="submit">Upload</button>
+        </div>
+    </form>
+</details>
+
+<!-- Invitees -->
+<hr>
+<h3>Invitees</h3>
+
+{% if invitees %}
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Invite Sent</th>
+                <th>RSVP</th>
+                <th>Dietary Requirements</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in invitees %}
+            <tr>
+                <form method="post" action="{{ url_for('invitee_update', invitee_id=inv.id) }}">
+                <td><strong>{{ inv.name }}</strong></td>
+                <td>
+                    <input type="checkbox" name="invite_sent" value="1" {{ 'checked' if inv.invite_sent }}
+                           onchange="this.form.submit()" style="accent-color: var(--color-accent);">
+                </td>
+                <td>
+                    <select name="rsvp" onchange="this.form.submit()" style="min-width:130px;">
+                        <option value="pending" {{ 'selected' if inv.rsvp == 'pending' }}>Pending</option>
+                        <option value="attending" {{ 'selected' if inv.rsvp == 'attending' }}>Attending</option>
+                        <option value="not attending" {{ 'selected' if inv.rsvp == 'not attending' }}>Not Attending</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="dietary" value="{{ inv.dietary or '' }}" placeholder="e.g., vegetarian, gluten-free"
+                           onchange="this.form.submit()" style="min-width:180px;">
+                </td>
+                </form>
+                <td>
+                    <form method="post" action="{{ url_for('invitee_delete', invitee_id=inv.id) }}" style="display:inline">
+                        <button type="submit" class="btn-remove" onclick="return confirm('Remove {{ inv.name }}?')">&#215;</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('invitee_add', plan_id=plan.id) }}" class="invitee-add-form">
+    <div class="form-row">
+        <input type="text" name="name" placeholder="Invitee name" required>
+        <input type="text" name="dietary" placeholder="Dietary requirements (optional)">
+        <button type="submit">Add Invitee</button>
+    </div>
+</form>
+
+<!-- Event Notes -->
+<hr>
+<h3>Notes</h3>
+{% if event_notes %}
+{% for note in event_notes %}
+<div class="note-row">
+    <form method="post" action="{{ url_for('event_note_delete', note_id=note.id) }}" style="display:inline">
+        <button type="submit" class="note-remove" onclick="return confirm('Delete this note?')">&#215;</button>
+    </form>
+    <span class="note-content">{{ note.content }}</span>
+    <small class="note-date">{{ note.created_at }}</small>
+</div>
+{% endfor %}
+{% endif %}
+
+<form method="post" action="{{ url_for('event_note_add', plan_id=plan.id) }}" class="note-form">
+    <textarea name="content" placeholder="Add a note for this event..." rows="2"></textarea>
+    <button type="submit" class="btn btn-outline">Add Note</button>
+</form>
 {% endif %}
 {% endblock %}
