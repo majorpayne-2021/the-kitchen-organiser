@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ hamper.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ hamper.title }}</h1>
+    {% if hamper.gift_date %}
+    <p class="subtitle">{{ hamper.gift_date|format_date }}</p>
+    {% endif %}
+</div>
+
+<div class="event-stats" style="margin-bottom:1.5rem;">
+    <div class="event-stat">
+        <span class="card-number">{{ total }}</span>
+        <span class="card-label">Items</span>
+    </div>
+    <div class="event-stat">
+        <span class="card-number">{{ done }}</span>
+        <span class="card-label">Done</span>
+    </div>
+</div>
+
+{% if total > 0 %}
+<div class="gift-progress">
+    <div class="gift-progress-bar" style="width: {{ (done / total * 100) if total else 0 }}%"></div>
+</div>
+{% endif %}
+
+<div class="recipe-actions">
+    <form method="post" action="{{ url_for('gift_hamper_delete', hamper_id=hamper.id) }}" style="display:inline">
+        <button type="submit" class="btn-remove" onclick="return confirm('Delete this entire gift list?')">Delete</button>
+    </form>
+</div>
+
+<hr>
+
+{% for item in items %}
+<div class="gift-item {{ 'checked' if item.checked }}">
+    <form method="post" action="{{ url_for('gift_item_toggle', item_id=item.id) }}" style="display:inline">
+        <button type="submit" class="gift-check" title="Toggle">
+            {% if item.checked %}&#10003;{% else %}&nbsp;&nbsp;{% endif %}
+        </button>
+    </form>
+    <span class="gift-item-desc">{{ item.description }}</span>
+    {% if item.note %}
+    <span class="gift-item-note">{{ item.note }}</span>
+    {% endif %}
+    <span class="gift-item-actions">
+        <button type="button" class="btn-remove" onclick="toggleNoteEdit({{ item.id }})" title="Edit note">&#9998;</button>
+        <form method="post" action="{{ url_for('gift_item_delete', item_id=item.id) }}" style="display:inline">
+            <button type="submit" class="btn-remove" onclick="return confirm('Remove this item?')">&#215;</button>
+        </form>
+    </span>
+</div>
+<form method="post" action="{{ url_for('gift_item_note', item_id=item.id) }}" id="note-edit-{{ item.id }}" class="gift-note-edit" style="display:none;">
+    <input type="text" name="note" value="{{ item.note or '' }}" placeholder="Add a note...">
+    <button type="submit" style="padding:4px 10px; font-size:0.8em;">Save</button>
+</form>
+{% endfor %}
+
+<form method="post" action="{{ url_for('gift_item_add', hamper_id=hamper.id) }}" class="gift-add-item">
+    <div class="form-row">
+        <input type="text" name="description" placeholder="Add item (e.g., Sourdough bread, Homemade jam)" required>
+        <input type="text" name="note" placeholder="Note (optional)">
+        <button type="submit">Add</button>
+    </div>
+</form>
+
+<script>
+function toggleNoteEdit(id) {
+    const el = document.getElementById('note-edit-' + id);
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+</script>
+{% endblock %}

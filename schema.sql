@@ -110,3 +110,20 @@ CREATE TABLE IF NOT EXISTS gift_idea (
     purchased INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS gift_hamper (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    gift_date TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS gift_hamper_item (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hamper_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    checked INTEGER DEFAULT 0,
+    note TEXT,
+    sort_order INTEGER DEFAULT 0,
+    FOREIGN KEY (hamper_id) REFERENCES gift_hamper(id) ON DELETE CASCADE
+);

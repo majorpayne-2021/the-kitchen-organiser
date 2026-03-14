@@ -15,8 +15,8 @@
         <div class="form-group">
             <label for="plan-type">Type</label>
             <select name="plan_type" id="plan-type" onchange="togglePlanType()">
-                <option value="weekly" {{ 'selected' if not plan or plan.plan_type == 'weekly' }}>Weekly Plan</option>
-                <option value="event" {{ 'selected' if plan and plan.plan_type == 'event' }}>Event Menu</option>
+                <option value="weekly" {{ 'selected' if (plan and plan.plan_type == 'weekly') or (not plan and default_type == 'weekly') }}>Weekly Plan</option>
+                <option value="event" {{ 'selected' if (plan and plan.plan_type == 'event') or (not plan and default_type == 'event') }}>Event Menu</option>
             </select>
         </div>
         <div class="form-group" id="event-date-group">

@@ -756,7 +756,7 @@ th {
 
 /* ── Gift Ideas ──────────────────────────────────────────────────────────── */
 
-.gift-form {
+.gift-new-form {
     margin-bottom: 2rem;
 }
 
@@ -775,18 +775,39 @@ th {
     white-space: nowrap;
 }
 
-.gift-section {
-    margin-bottom: 2rem;
+.gift-hamper {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
-.gift-section h2 {
+.gift-hamper-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.gift-hamper-header h2 {
     font-size: 1.4rem;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--color-border-light);
+    margin-bottom: 0.15rem;
 }
 
-.gift-row {
+.gift-progress {
+    height: 4px;
+    background: var(--color-border-light);
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.gift-progress-bar {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 0.3s;
+}
+
+.gift-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -794,16 +815,16 @@ th {
     border-bottom: 1px solid var(--color-border-light);
 }
 
-.gift-row.purchased .gift-idea {
+.gift-item.checked .gift-item-desc {
     text-decoration: line-through;
     color: var(--color-text-light);
 }
 
 .gift-check {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     padding: 0 !important;
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
     background: var(--color-surface) !important;
@@ -816,16 +837,51 @@ th {
     justify-content: center;
 }
 
-.gift-idea {
+.gift-item-desc {
     flex: 1;
     font-size: 0.95rem;
 }
 
-.gift-occasion {
+.gift-item-note {
     font-size: 0.8rem;
     color: var(--color-text-light);
     font-style: italic;
     flex-shrink: 0;
+}
+
+.gift-item-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.gift-note-edit {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.3rem 0 0.5rem 2.75rem;
+}
+
+.gift-note-edit input {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+}
+
+.gift-add-item {
+    margin-top: 0.75rem;
+}
+
+.gift-add-item .form-row {
+    gap: 0.5rem;
+}
+
+.gift-add-item input {
+    font-size: 0.9rem;
+}
+
+.gift-add-item button {
+    font-size: 0.8rem;
+    padding: 0.4rem 1rem;
 }
 
 /* ── Grocery List ────────────────────────────────────────────────────────── */

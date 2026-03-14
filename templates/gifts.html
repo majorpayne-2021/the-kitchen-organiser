@@ -1,41 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Gift Ideas{% endblock %}
 
+{% macro gift_card(hamper) %}
+<article class="plan-card">
+    <div class="plan-card-body">
+        <a href="{{ url_for('gift_detail', hamper_id=hamper.id) }}">
+            <strong>{{ hamper.title }}</strong>
+        </a>
+        <small class="muted">
+            {% if hamper.gift_date %}{{ hamper.gift_date|format_date }}{% else %}Created {{ hamper.created_at }}{% endif %}
+        </small>
+        {% if hamper.id in hamper_stats %}
+        <small class="muted">
+            {{ hamper_stats[hamper.id].done }}/{{ hamper_stats[hamper.id].total }} items done
+        </small>
+        {% endif %}
+    </div>
+    <div class="plan-card-actions">
+        <a href="{{ url_for('gift_detail', hamper_id=hamper.id) }}">View</a>
+        <form method="post" action="{{ url_for('gift_hamper_delete', hamper_id=hamper.id) }}" style="display:inline">
+            <button type="submit" class="btn-remove" onclick="return confirm('Delete this gift list?')">&#215;</button>
+        </form>
+    </div>
+</article>
+{% endmacro %}
+
 {% block content %}
 <div class="page-header">
     <h1>Gift Ideas</h1>
 </div>
 
-<form method="post" action="{{ url_for('gift_add') }}" class="gift-form">
+<form method="post" action="{{ url_for('gift_hamper_new') }}" class="gift-new-form">
     <div class="form-row">
-        <input type="text" name="recipient" placeholder="Recipient" required>
-        <input type="text" name="idea" placeholder="Gift idea" required>
-        <input type="text" name="occasion" placeholder="Occasion (optional)">
-        <button type="submit">Add</button>
+        <input type="text" name="title" placeholder="Gift list title (e.g., Birthday gift for Holly)" required>
+        <input type="date" name="gift_date">
+        <button type="submit">Create</button>
     </div>
 </form>
 
-{% if gifts_by_recipient %}
-{% for recipient, gifts in gifts_by_recipient.items() %}
-<section class="gift-section">
-    <h2>{{ recipient }}</h2>
-    {% for gift in gifts %}
-    <div class="gift-row {{ 'purchased' if gift.purchased }}">
-        <form method="post" action="{{ url_for('gift_toggle', gift_id=gift.id) }}" style="display:inline">
-            <button type="submit" class="gift-check" title="Mark as {{ 'not purchased' if gift.purchased else 'purchased' }}">
-                {% if gift.purchased %}&#10003;{% else %}&nbsp;&nbsp;{% endif %}
-            </button>
-        </form>
-        <span class="gift-idea">{{ gift.idea }}</span>
-        {% if gift.occasion %}<span class="gift-occasion">{{ gift.occasion }}</span>{% endif %}
-        <form method="post" action="{{ url_for('gift_delete', gift_id=gift.id) }}" style="display:inline">
-            <button type="submit" class="btn-remove" onclick="return confirm('Remove this gift idea?')">&#215;</button>
-        </form>
-    </div>
-    {% endfor %}
-</section>
+{% if upcoming %}
+{% for hamper in upcoming %}
+{{ gift_card(hamper) }}
 {% endfor %}
 {% else %}
-<p class="empty-state">No gift ideas yet. Add one above!</p>
+<p class="empty-state">No upcoming gifts. Create one above!</p>
+{% endif %}
+
+{% if past %}
+<hr>
+<h2>Past Gifts</h2>
+{% for hamper in past %}
+{{ gift_card(hamper) }}
+{% endfor %}
 {% endif %}
 {% endblock %}

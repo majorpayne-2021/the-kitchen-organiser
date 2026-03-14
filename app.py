@@ -110,6 +110,26 @@ def event_datetime_filter(plan):
     return date_str
 
 
+@app.template_filter('format_date')
+def format_date_filter(date_str):
+    """Format a date string nicely, e.g. 'Monday, 16th March 2026'."""
+    from datetime import datetime
+    if not date_str:
+        return ''
+    try:
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+    except (ValueError, TypeError):
+        return date_str
+
+    day = dt.day
+    if 11 <= day <= 13:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+
+    return dt.strftime(f'%A, {day}{suffix} %B %Y')
+
+
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -118,7 +138,7 @@ def dashboard():
     recipe_count = db.execute('SELECT COUNT(*) as cnt FROM recipe').fetchone()['cnt']
     meal_plan_count = db.execute("SELECT COUNT(*) as cnt FROM meal_plan WHERE plan_type = 'weekly'").fetchone()['cnt']
     event_plan_count = db.execute("SELECT COUNT(*) as cnt FROM meal_plan WHERE plan_type = 'event'").fetchone()['cnt']
-    gift_count = db.execute('SELECT COUNT(*) as cnt FROM gift_idea').fetchone()['cnt']
+    gift_count = db.execute('SELECT COUNT(*) as cnt FROM gift_hamper').fetchone()['cnt']
     recent_recipes = db.execute('''
         SELECT r.*, p.filename AS photo FROM recipe r
         LEFT JOIN photo p ON p.recipe_id = r.id AND p.is_primary = 1
@@ -507,22 +527,35 @@ def meal_plan_list():
 
 @app.route('/event-plans')
 def event_plan_list():
+    from datetime import date
     db = get_db()
-    plans = db.execute("""
+    today = date.today().isoformat()
+
+    upcoming = db.execute("""
         SELECT * FROM meal_plan WHERE plan_type = 'event'
+        AND (event_date >= ? OR event_date IS NULL)
         ORDER BY CASE WHEN event_date IS NULL THEN 1 ELSE 0 END,
                  event_date ASC, created_at DESC
-    """).fetchall()
-    # Attach invitee stats to each plan
+    """, (today,)).fetchall()
+
+    past = db.execute("""
+        SELECT * FROM meal_plan WHERE plan_type = 'event'
+        AND event_date < ?
+        ORDER BY event_date DESC
+    """, (today,)).fetchall()
+
+    # Attach invitee stats to all plans
     plan_stats = {}
-    for plan in plans:
+    for plan in list(upcoming) + list(past):
         stats = db.execute('''
             SELECT COUNT(*) as total,
                    SUM(CASE WHEN rsvp = 'attending' THEN 1 ELSE 0 END) as attending
             FROM event_invitee WHERE meal_plan_id = ?
         ''', (plan['id'],)).fetchone()
         plan_stats[plan['id']] = {'total': stats['total'], 'attending': stats['attending'] or 0}
-    return render_template('plan_list.html', plans=plans, plan_type='event',
+
+    return render_template('plan_list.html', plans=upcoming, past_plans=past,
+                           plan_type='event',
                            page_title='Event Plans', page_subtitle='Hosting menus and events',
                            plan_stats=plan_stats)
 
@@ -531,9 +564,11 @@ def event_plan_list():
 def plan_new():
     if request.method == 'POST':
         return save_plan(None)
+    default_type = request.args.get('type', 'weekly')
     recipes = get_db().execute('SELECT id, title FROM recipe ORDER BY title').fetchall()
     return render_template('meal_plan_form.html', plan=None, items=[], recipes=recipes,
-                           days=WEEKLY_DAYS, meals=WEEKLY_MEALS, courses=EVENT_COURSES)
+                           days=WEEKLY_DAYS, meals=WEEKLY_MEALS, courses=EVENT_COURSES,
+                           default_type=default_type)
 
 
 @app.route('/plan/<int:plan_id>')
@@ -881,44 +916,122 @@ def event_note_delete(note_id):
 
 # ── Gift Ideas ────────────────────────────────────────────────────────────────
 
+def _hamper_stats(db, hamper_id):
+    items = db.execute(
+        'SELECT * FROM gift_hamper_item WHERE hamper_id = ? ORDER BY sort_order, id',
+        (hamper_id,)
+    ).fetchall()
+    total = len(items)
+    done = sum(1 for i in items if i['checked'])
+    return items, total, done
+
+
 @app.route('/gifts')
 def gift_list():
+    from datetime import date
     db = get_db()
-    gifts = db.execute('SELECT * FROM gift_idea ORDER BY purchased, recipient, created_at DESC').fetchall()
-    gifts_by_recipient = {}
-    for gift in gifts:
-        gifts_by_recipient.setdefault(gift['recipient'], []).append(gift)
-    return render_template('gifts.html', gifts_by_recipient=gifts_by_recipient)
+    today = date.today().isoformat()
+
+    upcoming = db.execute("""
+        SELECT * FROM gift_hamper
+        WHERE gift_date >= ? OR gift_date IS NULL
+        ORDER BY CASE WHEN gift_date IS NULL THEN 1 ELSE 0 END,
+                 gift_date ASC, created_at DESC
+    """, (today,)).fetchall()
+
+    past = db.execute("""
+        SELECT * FROM gift_hamper WHERE gift_date < ?
+        ORDER BY gift_date DESC
+    """, (today,)).fetchall()
+
+    hamper_stats = {}
+    for h in list(upcoming) + list(past):
+        _, total, done = _hamper_stats(db, h['id'])
+        hamper_stats[h['id']] = {'total': total, 'done': done}
+
+    return render_template('gifts.html', upcoming=upcoming, past=past,
+                           hamper_stats=hamper_stats)
 
 
-@app.route('/gift/add', methods=['POST'])
-def gift_add():
+@app.route('/gift/<int:hamper_id>')
+def gift_detail(hamper_id):
     db = get_db()
-    recipient = request.form.get('recipient', '').strip()
-    idea = request.form.get('idea', '').strip()
-    occasion = request.form.get('occasion', '').strip()
-    if not recipient or not idea:
-        flash('Recipient and idea are required.')
+    hamper = db.execute('SELECT * FROM gift_hamper WHERE id = ?', (hamper_id,)).fetchone()
+    if hamper is None:
+        flash('Gift list not found.')
         return redirect(url_for('gift_list'))
-    db.execute('INSERT INTO gift_idea (recipient, idea, occasion) VALUES (?, ?, ?)',
-               (recipient, idea, occasion or None))
+    items, total, done = _hamper_stats(db, hamper_id)
+    return render_template('gift_detail.html', hamper=hamper, items=items,
+                           total=total, done=done)
+
+
+@app.route('/gift/new', methods=['POST'])
+def gift_hamper_new():
+    db = get_db()
+    title = request.form.get('title', '').strip()
+    gift_date = request.form.get('gift_date', '').strip() or None
+    if not title:
+        flash('Title is required.')
+        return redirect(url_for('gift_list'))
+    db.execute('INSERT INTO gift_hamper (title, gift_date) VALUES (?, ?)', (title, gift_date))
     db.commit()
     return redirect(url_for('gift_list'))
 
 
-@app.route('/gift/<int:gift_id>/toggle', methods=['POST'])
-def gift_toggle(gift_id):
+@app.route('/gift/<int:hamper_id>/add-item', methods=['POST'])
+def gift_item_add(hamper_id):
     db = get_db()
-    db.execute('UPDATE gift_idea SET purchased = NOT purchased WHERE id = ?', (gift_id,))
+    description = request.form.get('description', '').strip()
+    note = request.form.get('note', '').strip()
+    if not description:
+        flash('Item description is required.')
+        return redirect(url_for('gift_detail', hamper_id=hamper_id))
+    max_order = db.execute(
+        'SELECT COALESCE(MAX(sort_order), 0) as m FROM gift_hamper_item WHERE hamper_id = ?',
+        (hamper_id,)
+    ).fetchone()['m']
+    db.execute(
+        'INSERT INTO gift_hamper_item (hamper_id, description, note, sort_order) VALUES (?, ?, ?, ?)',
+        (hamper_id, description, note or None, max_order + 1)
+    )
     db.commit()
-    return redirect(url_for('gift_list'))
+    return redirect(url_for('gift_detail', hamper_id=hamper_id))
 
 
-@app.route('/gift/<int:gift_id>/delete', methods=['POST'])
-def gift_delete(gift_id):
+@app.route('/gift/item/<int:item_id>/toggle', methods=['POST'])
+def gift_item_toggle(item_id):
     db = get_db()
-    db.execute('DELETE FROM gift_idea WHERE id = ?', (gift_id,))
+    item = db.execute('SELECT hamper_id FROM gift_hamper_item WHERE id = ?', (item_id,)).fetchone()
+    db.execute('UPDATE gift_hamper_item SET checked = NOT checked WHERE id = ?', (item_id,))
     db.commit()
+    return redirect(url_for('gift_detail', hamper_id=item['hamper_id']))
+
+
+@app.route('/gift/item/<int:item_id>/note', methods=['POST'])
+def gift_item_note(item_id):
+    db = get_db()
+    item = db.execute('SELECT hamper_id FROM gift_hamper_item WHERE id = ?', (item_id,)).fetchone()
+    note = request.form.get('note', '').strip()
+    db.execute('UPDATE gift_hamper_item SET note = ? WHERE id = ?', (note or None, item_id))
+    db.commit()
+    return redirect(url_for('gift_detail', hamper_id=item['hamper_id']))
+
+
+@app.route('/gift/item/<int:item_id>/delete', methods=['POST'])
+def gift_item_delete(item_id):
+    db = get_db()
+    item = db.execute('SELECT hamper_id FROM gift_hamper_item WHERE id = ?', (item_id,)).fetchone()
+    db.execute('DELETE FROM gift_hamper_item WHERE id = ?', (item_id,))
+    db.commit()
+    return redirect(url_for('gift_detail', hamper_id=item['hamper_id']))
+
+
+@app.route('/gift/<int:hamper_id>/delete', methods=['POST'])
+def gift_hamper_delete(hamper_id):
+    db = get_db()
+    db.execute('DELETE FROM gift_hamper WHERE id = ?', (hamper_id,))
+    db.commit()
+    flash('Gift list deleted.')
     return redirect(url_for('gift_list'))
 
 

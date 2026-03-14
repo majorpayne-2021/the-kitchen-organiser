@@ -1,16 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ page_title|default('All Plans') }}{% endblock %}
 
-{% block content %}
-<div class="page-header">
-    <h1>{{ page_title|default('All Plans') }}</h1>
-    {% if page_subtitle %}<p class="subtitle">{{ page_subtitle }}</p>{% endif %}
-</div>
-
-<a href="{{ url_for('plan_new') }}" class="btn">+ New Plan</a>
-
-{% if plans %}
-{% for plan in plans %}
+{% macro plan_card(plan) %}
 <article class="plan-card">
     <div class="plan-card-body">
         <a href="{{ url_for('plan_detail', plan_id=plan.id) }}">
@@ -33,8 +24,29 @@
         </form>
     </div>
 </article>
+{% endmacro %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ page_title|default('All Plans') }}</h1>
+    {% if page_subtitle %}<p class="subtitle">{{ page_subtitle }}</p>{% endif %}
+</div>
+
+<a href="{{ url_for('plan_new', type=plan_type|default('weekly')) }}" class="btn">+ New Plan</a>
+
+{% if plans %}
+{% for plan in plans %}
+{{ plan_card(plan) }}
 {% endfor %}
 {% else %}
-<p class="empty-state">No plans yet.</p>
+<p class="empty-state">No {% if plan_type == 'event' %}upcoming {% endif %}plans yet.</p>
+{% endif %}
+
+{% if past_plans %}
+<hr>
+<h2>Past Events</h2>
+{% for plan in past_plans %}
+{{ plan_card(plan) }}
+{% endfor %}
 {% endif %}
 {% endblock %}
