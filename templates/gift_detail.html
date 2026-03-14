@@ -2,6 +2,7 @@
 {% block title %}{{ hamper.title }}{% endblock %}
 
 {% block content %}
+<a href="{{ url_for('gift_list') }}" class="back-link">&larr; Back to Gift Ideas</a>
 <div class="page-header">
     <h1>{{ hamper.title }}</h1>
     <p class="subtitle" id="date-display" onclick="document.getElementById('date-edit').style.display='flex'; this.style.display='none';" style="cursor:pointer;" title="Click to edit date">

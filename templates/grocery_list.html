@@ -2,6 +2,7 @@
 {% block title %}Grocery List — {{ plan.name }}{% endblock %}
 
 {% block content %}
+<a href="{{ url_for('plan_detail', plan_id=plan.id) }}" class="back-link">&larr; Back to {{ plan.name }}</a>
 <div class="page-header">
     <h1>Grocery List</h1>
     <p class="subtitle">For: <a href="{{ url_for('plan_detail', plan_id=plan.id) }}">{{ plan.name }}</a></p>

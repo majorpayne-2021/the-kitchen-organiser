@@ -142,6 +142,20 @@ footer {
     margin-top: 3rem;
 }
 
+/* ── Back Link ────────────────────────────────────────────────────────────── */
+
+.back-link {
+    display: inline-block;
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+}
+
+.back-link:hover {
+    color: var(--color-accent);
+}
+
 /* ── Page Header ─────────────────────────────────────────────────────────── */
 
 .page-header {

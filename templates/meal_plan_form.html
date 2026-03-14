@@ -2,6 +2,15 @@
 {% block title %}{{ 'Edit' if plan else 'New' }} Plan{% endblock %}
 
 {% block content %}
+{% if plan %}
+    {% if plan.plan_type == 'event' %}
+<a href="{{ url_for('plan_detail', plan_id=plan.id) }}" class="back-link">&larr; Back to {{ plan.name }}</a>
+    {% else %}
+<a href="{{ url_for('plan_detail', plan_id=plan.id) }}" class="back-link">&larr; Back to {{ plan.name }}</a>
+    {% endif %}
+{% else %}
+<a href="javascript:history.back()" class="back-link">&larr; Back</a>
+{% endif %}
 <div class="page-header">
     <h1>{{ 'Edit' if plan else 'New' }} Plan</h1>
 </div>

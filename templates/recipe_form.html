@@ -2,6 +2,11 @@
 {% block title %}{{ 'Edit' if recipe else 'New' }} Recipe{% endblock %}
 
 {% block content %}
+{% if recipe %}
+<a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="back-link">&larr; Back to {{ recipe.title }}</a>
+{% else %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; Back to Recipes</a>
+{% endif %}
 <div class="page-header">
     <h1>{{ 'Edit' if recipe else 'New' }} Recipe</h1>
 </div>

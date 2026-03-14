@@ -2,6 +2,7 @@
 {% block title %}{{ recipe.title }}{% endblock %}
 
 {% block content %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; Back to Recipes</a>
 <div class="page-header">
     <h1>{{ recipe.title }}</h1>
     {% if recipe.description %}<p class="subtitle">{{ recipe.description }}</p>{% endif %}
