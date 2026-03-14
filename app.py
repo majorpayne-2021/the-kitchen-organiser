@@ -961,8 +961,11 @@ def gift_detail(hamper_id):
         flash('Gift list not found.')
         return redirect(url_for('gift_list'))
     items, total, done = _hamper_stats(db, hamper_id)
+    photos = db.execute(
+        'SELECT * FROM gift_photo WHERE hamper_id = ? ORDER BY created_at', (hamper_id,)
+    ).fetchall()
     return render_template('gift_detail.html', hamper=hamper, items=items,
-                           total=total, done=done)
+                           total=total, done=done, photos=photos)
 
 
 @app.route('/gift/new', methods=['POST'])
@@ -1024,6 +1027,62 @@ def gift_item_delete(item_id):
     db.execute('DELETE FROM gift_hamper_item WHERE id = ?', (item_id,))
     db.commit()
     return redirect(url_for('gift_detail', hamper_id=item['hamper_id']))
+
+
+@app.route('/gift/<int:hamper_id>/photo', methods=['POST'])
+def gift_photo_upload(hamper_id):
+    db = get_db()
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        flash('No photo selected.')
+        return redirect(url_for('gift_detail', hamper_id=hamper_id))
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.gif', '.webp'):
+        flash('Unsupported image format.')
+        return redirect(url_for('gift_detail', hamper_id=hamper_id))
+
+    filename = f'gift_{uuid.uuid4().hex}{ext}'
+    filepath = os.path.join(PHOTO_DIR, filename)
+    file.save(filepath)
+
+    try:
+        img = Image.open(filepath)
+        img = ImageOps.exif_transpose(img)
+        img.save(filepath)
+        thumb = img.copy()
+        thumb.thumbnail(THUMB_SIZE)
+        thumb.save(os.path.join(PHOTO_DIR, f'thumb_{filename}'))
+    except Exception:
+        pass
+
+    caption = request.form.get('caption', '').strip()
+    db.execute(
+        'INSERT INTO gift_photo (hamper_id, filename, caption) VALUES (?, ?, ?)',
+        (hamper_id, filename, caption or None)
+    )
+    db.commit()
+    flash('Photo uploaded!')
+    return redirect(url_for('gift_detail', hamper_id=hamper_id))
+
+
+@app.route('/gift/photo/<int:photo_id>/delete', methods=['POST'])
+def gift_photo_delete(photo_id):
+    db = get_db()
+    photo = db.execute('SELECT * FROM gift_photo WHERE id = ?', (photo_id,)).fetchone()
+    if photo is None:
+        flash('Photo not found.')
+        return redirect(url_for('gift_list'))
+
+    for prefix in ('', 'thumb_'):
+        path = os.path.join(PHOTO_DIR, prefix + photo['filename'])
+        if os.path.exists(path):
+            os.remove(path)
+
+    db.execute('DELETE FROM gift_photo WHERE id = ?', (photo_id,))
+    db.commit()
+    flash('Photo deleted.')
+    return redirect(url_for('gift_detail', hamper_id=photo['hamper_id']))
 
 
 @app.route('/gift/<int:hamper_id>/delete', methods=['POST'])

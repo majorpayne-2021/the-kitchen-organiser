@@ -66,6 +66,37 @@
     </div>
 </form>
 
+<!-- Inspiration Photos -->
+<hr>
+<h3>Inspiration</h3>
+{% if photos %}
+<div class="photo-gallery">
+    {% for photo in photos %}
+    <figure>
+        <img src="{{ url_for('static', filename='photos/' + photo.filename) }}"
+             alt="{{ photo.caption or 'Inspiration' }}" loading="lazy">
+        {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+        <div class="photo-actions">
+            <form method="post" action="{{ url_for('gift_photo_delete', photo_id=photo.id) }}" style="display:inline">
+                <button type="submit" class="btn-remove" onclick="return confirm('Delete this photo?')">Remove</button>
+            </form>
+        </div>
+    </figure>
+    {% endfor %}
+</div>
+{% endif %}
+
+<details>
+    <summary>Add Inspiration Photo</summary>
+    <form method="post" action="{{ url_for('gift_photo_upload', hamper_id=hamper.id) }}" enctype="multipart/form-data">
+        <div class="form-group" style="display:flex; gap:1rem; align-items:flex-end;">
+            <input type="file" name="photo" accept="image/*" required>
+            <input type="text" name="caption" placeholder="Caption (optional)">
+            <button type="submit">Upload</button>
+        </div>
+    </form>
+</details>
+
 <script>
 function toggleNoteEdit(id) {
     const el = document.getElementById('note-edit-' + id);
