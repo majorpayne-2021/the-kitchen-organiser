@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if plan else 'New' }} Meal Plan{% endblock %}
+
+{% block content %}
+<h1>{{ 'Edit' if plan else 'New' }} Meal Plan</h1>
+
+<form method="post" id="plan-form">
+    <div class="grid">
+        <label>
+            Plan Name *
+            <input type="text" name="name" value="{{ plan.name if plan else '' }}" required>
+        </label>
+        <label>
+            Type
+            <select name="plan_type" id="plan-type" onchange="togglePlanType()">
+                <option value="weekly" {{ 'selected' if not plan or plan.plan_type == 'weekly' }}>Weekly Plan</option>
+                <option value="event" {{ 'selected' if plan and plan.plan_type == 'event' }}>Event Menu</option>
+            </select>
+        </label>
+    </div>
+
+    <!-- Weekly Plan Grid -->
+    <div id="weekly-section">
+        <h3>Weekly Schedule</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    {% for meal in meals %}
+                    <th>{{ meal }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in days %}
+                <tr>
+                    <td><strong>{{ day }}</strong></td>
+                    {% for meal in meals %}
+                    {% set slot = day + ' — ' + meal %}
+                    <td>
+                        <input type="hidden" name="slot_label" value="{{ slot }}" class="weekly-slot">
+                        <select name="recipe_id" class="weekly-slot">
+                            <option value="">—</option>
+                            {% for r in recipes %}
+                            <option value="{{ r.id }}"
+                                {% for item in items if item.slot_label == slot and item.recipe_id == r.id %}
+                                selected
+                                {% endfor %}
+                            >{{ r.title }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="number" name="servings_override" placeholder="Svg" min="1"
+                               class="weekly-slot" style="width: 70px; margin-top: 4px;"
+                               {% for item in items if item.slot_label == slot %}
+                               value="{{ item.servings_override or '' }}"
+                               {% endfor %}>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Event Menu -->
+    <div id="event-section" style="display:none">
+        <h3>Courses</h3>
+        <div id="event-items">
+            {% if plan and plan.plan_type == 'event' %}
+                {% for item in items %}
+                <div class="grid event-row">
+                    <input type="text" name="slot_label" value="{{ item.slot_label }}" placeholder="Course label" class="event-slot">
+                    <select name="recipe_id" class="event-slot">
+                        <option value="">—</option>
+                        {% for r in recipes %}
+                        <option value="{{ r.id }}" {{ 'selected' if r.id == item.recipe_id }}>{{ r.title }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="servings_override" value="{{ item.servings_override or '' }}"
+                           placeholder="Servings" min="1" class="event-slot">
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <button type="button" class="outline" onclick="addEventRow()">+ Add Course Item</button>
+    </div>
+
+    <br>
+    <div class="grid">
+        <button type="submit">Save Plan</button>
+        <a href="{{ url_for('plan_list') }}" role="button" class="outline">Cancel</a>
+    </div>
+</form>
+
+<script>
+const recipes = {{ recipes|map(attribute='id')|list|tojson }};
+const recipeTitles = {{ recipes|map(attribute='title')|list|tojson }};
+
+function togglePlanType() {
+    const type = document.getElementById('plan-type').value;
+    const weekly = document.getElementById('weekly-section');
+    const event = document.getElementById('event-section');
+
+    if (type === 'weekly') {
+        weekly.style.display = '';
+        event.style.display = 'none';
+        // Enable weekly inputs, disable event inputs
+        weekly.querySelectorAll('.weekly-slot').forEach(el => el.disabled = false);
+        event.querySelectorAll('.event-slot').forEach(el => el.disabled = true);
+    } else {
+        weekly.style.display = 'none';
+        event.style.display = '';
+        weekly.querySelectorAll('.weekly-slot').forEach(el => el.disabled = true);
+        event.querySelectorAll('.event-slot').forEach(el => el.disabled = false);
+    }
+}
+
+function addEventRow() {
+    const container = document.getElementById('event-items');
+    const div = document.createElement('div');
+    div.className = 'grid event-row';
+    let options = '<option value="">—</option>';
+    for (let i = 0; i < recipes.length; i++) {
+        options += `<option value="${recipes[i]}">${recipeTitles[i]}</option>`;
+    }
+    div.innerHTML = `
+        <input type="text" name="slot_label" placeholder="Course label (e.g., Appetizer)" class="event-slot">
+        <select name="recipe_id" class="event-slot">${options}</select>
+        <input type="number" name="servings_override" placeholder="Servings" min="1" class="event-slot">
+    `;
+    container.appendChild(div);
+}
+
+// Initialize visibility on load
+togglePlanType();
+</script>
+{% endblock %}

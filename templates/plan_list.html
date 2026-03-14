@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Meal Plans{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Meal Plans</h1>
+    <p>Weekly plans and event menus</p>
+</hgroup>
+
+<a href="{{ url_for('plan_new') }}" role="button">+ New Plan</a>
+
+{% if plans %}
+{% for plan in plans %}
+<article>
+    <header>
+        <a href="{{ url_for('plan_detail', plan_id=plan.id) }}">
+            <strong>{{ plan.name }}</strong>
+        </a>
+        <small> — {{ 'Weekly Plan' if plan.plan_type == 'weekly' else 'Event Menu' }}</small>
+    </header>
+    <footer>
+        <small>Created {{ plan.created_at }}</small>
+        <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit</a> |
+        <a href="{{ url_for('grocery_list', plan_id=plan.id) }}">Grocery List</a>
+    </footer>
+</article>
+{% endfor %}
+{% else %}
+<p>No meal plans yet.</p>
+{% endif %}
+{% endblock %}

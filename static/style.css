@@ -1,0 +1,90 @@
+/* Recipe card grid */
+.recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.recipe-grid article {
+    margin: 0;
+}
+
+.recipe-grid article a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.recipe-grid article img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: var(--pico-border-radius) var(--pico-border-radius) 0 0;
+}
+
+.recipe-grid article header {
+    padding: 0.5rem 0;
+}
+
+.no-photo {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pico-muted-border-color);
+    color: var(--pico-muted-color);
+    border-radius: var(--pico-border-radius) var(--pico-border-radius) 0 0;
+}
+
+/* Photo gallery */
+.photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.photo-gallery figure {
+    margin: 0;
+}
+
+.photo-gallery img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: var(--pico-border-radius);
+}
+
+/* Grocery list */
+.grocery-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.grocery-list li {
+    padding: 0.25rem 0;
+}
+
+.grocery-list input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+/* Table responsiveness */
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Print styles */
+@media print {
+    nav, footer, button, .outline, details, form {
+        display: none !important;
+    }
+
+    .grocery-list input[type="checkbox"] {
+        display: inline-block !important;
+    }
+
+    .grocery-list label {
+        display: inline !important;
+    }
+}

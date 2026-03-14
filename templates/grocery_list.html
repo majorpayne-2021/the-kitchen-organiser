@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Grocery List — {{ plan.name }}{% endblock %}
+
+{% block content %}
+<h1>Grocery List</h1>
+<p>For: <a href="{{ url_for('plan_detail', plan_id=plan.id) }}">{{ plan.name }}</a></p>
+
+{% if grouped %}
+{% for category, items in grouped.items() %}
+<h3>{{ category|title }}</h3>
+<ul class="grocery-list">
+    {% for item in items %}
+    <li>
+        <label>
+            <input type="checkbox">
+            {% if item.quantity %}{{ item.quantity }}{% endif %}
+            {{ item.unit or '' }}
+            {{ item.name }}
+        </label>
+    </li>
+    {% endfor %}
+</ul>
+{% endfor %}
+
+<hr>
+<button onclick="window.print()" class="outline">Print Grocery List</button>
+{% else %}
+<p>No ingredients to show. Make sure recipes in this plan have ingredients listed.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }}{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>{{ recipe.title }}</h1>
+    {% if recipe.description %}<p>{{ recipe.description }}</p>{% endif %}
+</hgroup>
+
+<div class="grid">
+    <div>
+        {% if recipe.prep_time %}<small><strong>Prep:</strong> {{ recipe.prep_time }} min</small><br>{% endif %}
+        {% if recipe.cook_time %}<small><strong>Cook:</strong> {{ recipe.cook_time }} min</small><br>{% endif %}
+        {% if recipe.prep_time and recipe.cook_time %}
+        <small><strong>Total:</strong> {{ recipe.prep_time + recipe.cook_time }} min</small><br>
+        {% endif %}
+        {% if recipe.servings %}<small><strong>Servings:</strong> {{ recipe.servings }}</small><br>{% endif %}
+        {% if recipe.source %}<small><strong>Source:</strong> {{ recipe.source }}</small>{% endif %}
+    </div>
+    <div>
+        {% if tags %}
+        {% for tag in tags %}
+        <a href="{{ url_for('index', tag=tag.name) }}"><kbd>{{ tag.name }}</kbd></a>
+        {% endfor %}
+        {% endif %}
+        <br><br>
+        <a href="{{ url_for('recipe_edit', recipe_id=recipe.id) }}" role="button" class="outline">Edit</a>
+        <form method="post" action="{{ url_for('recipe_delete', recipe_id=recipe.id) }}" style="display:inline">
+            <button type="submit" class="outline secondary" onclick="return confirm('Delete this recipe?')">Delete</button>
+        </form>
+    </div>
+</div>
+
+<hr>
+
+<!-- Photos -->
+{% if photos %}
+<div class="photo-gallery">
+    {% for photo in photos %}
+    <figure>
+        <img src="{{ url_for('static', filename='photos/' + photo.filename) }}"
+             alt="{{ photo.caption or recipe.title }}" loading="lazy">
+        {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+        <div>
+            {% if not photo.is_primary %}
+            <form method="post" action="{{ url_for('photo_set_primary', photo_id=photo.id) }}" style="display:inline">
+                <button type="submit" class="outline contrast" style="padding: 4px 8px; font-size: 0.8em;">Set as Primary</button>
+            </form>
+            {% else %}
+            <small><em>Primary photo</em></small>
+            {% endif %}
+            <form method="post" action="{{ url_for('photo_delete', photo_id=photo.id) }}" style="display:inline">
+                <button type="submit" class="outline secondary" style="padding: 4px 8px; font-size: 0.8em;"
+                        onclick="return confirm('Delete this photo?')">Remove</button>
+            </form>
+        </div>
+    </figure>
+    {% endfor %}
+</div>
+{% endif %}
+
+<details>
+    <summary>Add Photo</summary>
+    <form method="post" action="{{ url_for('photo_upload', recipe_id=recipe.id) }}" enctype="multipart/form-data">
+        <div class="grid">
+            <input type="file" name="photo" accept="image/*" required>
+            <input type="text" name="caption" placeholder="Caption (optional)">
+        </div>
+        <button type="submit">Upload</button>
+    </form>
+</details>
+
+<hr>
+
+<!-- Ingredients & Steps side by side -->
+<div class="grid">
+    <div>
+        <h3>Ingredients</h3>
+        {% if ingredients %}
+        <ul>
+            {% for ing in ingredients %}
+            <li>
+                {% if ing.quantity %}
+                    {% if ing.quantity == ing.quantity|int %}{{ ing.quantity|int }}{% else %}{{ ing.quantity }}{% endif %}
+                {% endif %}
+                {{ ing.unit or '' }} {{ ing.name }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p><em>No ingredients listed.</em></p>
+        {% endif %}
+    </div>
+
+    <div>
+        <h3>Steps</h3>
+        {% set steps = recipe.steps|fromjson %}
+        {% if steps %}
+        <ol>
+            {% for step in steps %}
+            <li>{{ step }}</li>
+            {% endfor %}
+        </ol>
+        {% else %}
+        <p><em>No steps listed.</em></p>
+        {% endif %}
+    </div>
+</div>
+
+<hr>
+
+<!-- Notes -->
+<h3>Notes</h3>
+{% if notes %}
+{% for note in notes %}
+<article>
+    <p>{{ note.content }}</p>
+    <footer>
+        <small>{{ note.created_at }}</small>
+        <form method="post" action="{{ url_for('note_delete', note_id=note.id) }}" style="display:inline">
+            <button type="submit" class="outline secondary" style="padding: 2px 6px; font-size: 0.75em;"
+                    onclick="return confirm('Delete this note?')">Remove</button>
+        </form>
+    </footer>
+</article>
+{% endfor %}
+{% endif %}
+
+<form method="post" action="{{ url_for('note_add', recipe_id=recipe.id) }}">
+    <textarea name="content" placeholder="Add a note — what worked, what to change next time..." rows="3"></textarea>
+    <button type="submit" class="outline">Add Note</button>
+</form>
+{% endblock %}

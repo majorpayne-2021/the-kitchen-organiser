@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Recipes{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Recipes</h1>
+    <p>{{ recipes|length }} recipe{{ 's' if recipes|length != 1 }}</p>
+</hgroup>
+
+<div class="grid">
+    <form method="get" action="{{ url_for('index') }}" role="search">
+        <input type="search" name="q" placeholder="Search recipes..." value="{{ search_query }}">
+    </form>
+    <div>
+        {% if tags %}
+        <details class="dropdown">
+            <summary>{{ current_tag if current_tag else 'Filter by tag' }}</summary>
+            <ul>
+                <li><a href="{{ url_for('index') }}">All</a></li>
+                {% for tag in tags %}
+                <li><a href="{{ url_for('index', tag=tag.name) }}">{{ tag.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </details>
+        {% endif %}
+    </div>
+</div>
+
+{% if recipes %}
+<div class="recipe-grid">
+    {% for recipe in recipes %}
+    <article>
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">
+            {% if recipe.photo %}
+            <img src="{{ url_for('static', filename='photos/thumb_' + recipe.photo) }}"
+                 alt="{{ recipe.title }}" loading="lazy"
+                 onerror="this.src='{{ url_for('static', filename='photos/' + recipe.photo) }}'">
+            {% else %}
+            <div class="no-photo">No Photo</div>
+            {% endif %}
+            <header>
+                <strong>{{ recipe.title }}</strong>
+            </header>
+        </a>
+        {% if recipe.description %}
+        <p><small>{{ recipe.description[:100] }}{{ '...' if recipe.description|length > 100 }}</small></p>
+        {% endif %}
+        <footer>
+            {% if recipe.prep_time or recipe.cook_time %}
+            <small>
+                {% if recipe.prep_time %}Prep: {{ recipe.prep_time }}m{% endif %}
+                {% if recipe.cook_time %}{% if recipe.prep_time %} | {% endif %}Cook: {{ recipe.cook_time }}m{% endif %}
+            </small>
+            {% endif %}
+            {% if recipe.servings %}
+            <small> | Serves {{ recipe.servings }}</small>
+            {% endif %}
+        </footer>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<p>No recipes yet. <a href="{{ url_for('recipe_new') }}">Add your first recipe!</a></p>
+{% endif %}
+{% endblock %}

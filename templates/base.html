@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Recipes{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="container">
+        <ul>
+            <li><a href="{{ url_for('index') }}"><strong>Recipes</strong></a></li>
+        </ul>
+        <ul>
+            <li><a href="{{ url_for('recipe_new') }}">+ Add Recipe</a></li>
+            <li><a href="{{ url_for('ingredient_search') }}">Search by Ingredient</a></li>
+            <li><a href="{{ url_for('plan_list') }}">Meal Plans</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for msg in messages %}
+        <p role="alert">{{ msg }}</p>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="container">
+        <small>Recipe Manager</small>
+    </footer>
+</body>
+</html>

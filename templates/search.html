@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Search by Ingredient{% endblock %}
+
+{% block content %}
+<h1>What Can I Make?</h1>
+<p>Enter the ingredients you have on hand, separated by commas.</p>
+
+<form method="post">
+    <textarea name="ingredients" rows="3" placeholder="chicken, garlic, lemon, olive oil, rice">{{ search_text }}</textarea>
+    <button type="submit">Search</button>
+</form>
+
+{% if results %}
+<h2>Results</h2>
+{% for r in results %}
+<article>
+    <header>
+        <div class="grid">
+            <div>
+                <a href="{{ url_for('recipe_detail', recipe_id=r.recipe.id) }}">
+                    <strong>{{ r.recipe.title }}</strong>
+                </a>
+            </div>
+            <div style="text-align: right">
+                <strong>{{ r.match_pct }}% match</strong>
+            </div>
+        </div>
+    </header>
+    <div class="grid">
+        <div>
+            <small><strong>You have:</strong> {{ r.matched|join(', ') }}</small>
+        </div>
+        {% if r.missing %}
+        <div>
+            <small><strong>You need:</strong> {{ r.missing|join(', ') }}</small>
+        </div>
+        {% endif %}
+    </div>
+</article>
+{% endfor %}
+{% elif search_text %}
+<p>No matching recipes found.</p>
+{% endif %}
+{% endblock %}

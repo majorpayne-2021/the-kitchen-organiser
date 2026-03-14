@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.name }}{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>{{ plan.name }}</h1>
+    <p>{{ 'Weekly Plan' if plan.plan_type == 'weekly' else 'Event Menu' }}</p>
+</hgroup>
+
+<div>
+    <a href="{{ url_for('plan_edit', plan_id=plan.id) }}" role="button" class="outline">Edit</a>
+    <a href="{{ url_for('grocery_list', plan_id=plan.id) }}" role="button" class="outline">Grocery List</a>
+    <form method="post" action="{{ url_for('plan_delete', plan_id=plan.id) }}" style="display:inline">
+        <button type="submit" class="outline secondary" onclick="return confirm('Delete this plan?')">Delete</button>
+    </form>
+</div>
+
+<hr>
+
+{% if plan.plan_type == 'weekly' %}
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th></th>
+                {% for meal in meals %}
+                <th>{{ meal }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for day in days %}
+            <tr>
+                <td><strong>{{ day }}</strong></td>
+                {% for meal in meals %}
+                <td>
+                    {% for item in grid[day][meal] %}
+                    <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
+                    {% if item.servings_override %}<br><small>({{ item.servings_override }} servings)</small>{% endif %}
+                    {% else %}
+                    <small>—</small>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% else %}
+<!-- Event Menu -->
+{% for course, course_items in courses.items() %}
+<h3>{{ course }}</h3>
+<ul>
+    {% for item in course_items %}
+    <li>
+        <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
+        {% if item.servings_override %}<small> ({{ item.servings_override }} servings)</small>{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endfor %}
+{% endif %}
+
+{% if not items %}
+<p>No recipes assigned yet. <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit this plan</a> to add recipes.</p>
+{% endif %}
+{% endblock %}
