@@ -38,50 +38,9 @@
         </div>
     </div>
 
-    <!-- Weekly Plan Grid -->
+    <!-- Weekly Plan -->
     <div id="weekly-section">
-        <h3>Weekly Schedule</h3>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th></th>
-                        {% for meal in meals %}
-                        <th>{{ meal }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for day in days %}
-                    <tr>
-                        <td><strong>{{ day }}</strong></td>
-                        {% for meal in meals %}
-                        {% set slot = day + ' — ' + meal %}
-                        <td>
-                            <input type="hidden" name="slot_label" value="{{ slot }}" class="weekly-slot">
-                            <select name="recipe_id" class="weekly-slot" style="min-width:140px;">
-                                <option value="">—</option>
-                                {% for r in recipes %}
-                                <option value="{{ r.id }}"
-                                    {% for item in items if item.slot_label == slot and item.recipe_id == r.id %}
-                                    selected
-                                    {% endfor %}
-                                >{{ r.title }}</option>
-                                {% endfor %}
-                            </select>
-                            <input type="hidden" name="free_text" value="" class="weekly-slot">
-                            <input type="number" name="servings_override" placeholder="Svg" min="1"
-                                   class="weekly-slot" style="width: 70px; margin-top: 4px;"
-                                   {% for item in items if item.slot_label == slot %}
-                                   value="{{ item.servings_override or '' }}"
-                                   {% endfor %}>
-                        </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <p class="muted">Save this plan first, then add dishes, notes, and sides directly from the plan page.</p>
     </div>
 
     <!-- Event Menu -->
@@ -242,14 +201,12 @@ function togglePlanType() {
         event.style.display = 'none';
         dateGroup.style.display = 'none';
         timeGroup.style.display = 'none';
-        weekly.querySelectorAll('.weekly-slot').forEach(el => el.disabled = false);
         event.querySelectorAll('.event-slot').forEach(el => el.disabled = true);
     } else {
         weekly.style.display = 'none';
         event.style.display = '';
         dateGroup.style.display = '';
         timeGroup.style.display = '';
-        weekly.querySelectorAll('.weekly-slot').forEach(el => el.disabled = true);
         event.querySelectorAll('.event-slot').forEach(el => el.disabled = false);
     }
 }

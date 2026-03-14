@@ -506,7 +506,7 @@ def ingredient_search():
 # ── Meal Plan Routes ──────────────────────────────────────────────────────────
 
 WEEKLY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-WEEKLY_MEALS = ['Breakfast', 'Lunch', 'Dinner']
+WEEKLY_MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Sides', 'Snack']
 EVENT_COURSES = ['Savoury', 'Salads', 'Sides', 'Sweet', 'Drinks']
 
 
@@ -588,16 +588,26 @@ def plan_detail(plan_id):
     ''', (plan_id,)).fetchall()
 
     if plan['plan_type'] == 'weekly':
-        # Organize into grid: {day: {meal: [items]}}
-        grid = {day: {meal: [] for meal in WEEKLY_MEALS} for day in WEEKLY_DAYS}
+        # Organize by day → meal → [items]
+        grid = {day: {} for day in WEEKLY_DAYS}
         for item in items:
             parts = item['slot_label'].split(' — ')
             if len(parts) == 2:
                 day, meal = parts
-                if day in grid and meal in grid[day]:
-                    grid[day][meal].append(item)
+                if day in grid:
+                    grid[day].setdefault(meal, []).append(item)
+
+        # Load day notes
+        day_notes = {}
+        for row in db.execute(
+            'SELECT * FROM meal_plan_day_note WHERE meal_plan_id = ?', (plan['id'],)
+        ).fetchall():
+            day_notes[row['day']] = row
+
+        recipes = db.execute('SELECT id, title FROM recipe ORDER BY title').fetchall()
         return render_template('meal_plan.html', plan=plan, grid=grid,
-                               days=WEEKLY_DAYS, meals=WEEKLY_MEALS, items=items)
+                               days=WEEKLY_DAYS, meals=WEEKLY_MEALS, items=items,
+                               day_notes=day_notes, recipes=recipes)
     else:
         # Group by category label
         categories = {}
@@ -779,6 +789,78 @@ def api_recipes():
     else:
         recipes = db.execute('SELECT id, title FROM recipe ORDER BY title LIMIT 50').fetchall()
     return jsonify([{'id': r['id'], 'title': r['title']} for r in recipes])
+
+
+# ── Meal Plan Items (inline add/remove) ───────────────────────────────────────
+
+@app.route('/plan/<int:plan_id>/add-item', methods=['POST'])
+def plan_item_add(plan_id):
+    db = get_db()
+    day = request.form.get('day', '').strip()
+    meal = request.form.get('meal', '').strip()
+    recipe_id = request.form.get('recipe_id', '').strip()
+    free_text = request.form.get('free_text', '').strip()
+
+    if not day or not meal or (not recipe_id and not free_text):
+        flash('Please select a meal type and enter a dish or pick a recipe.')
+        return redirect(url_for('plan_detail', plan_id=plan_id))
+
+    slot_label = f'{day} — {meal}'
+    rid = int(recipe_id) if recipe_id else None
+
+    max_order = db.execute(
+        'SELECT COALESCE(MAX(sort_order), 0) as m FROM meal_plan_item WHERE meal_plan_id = ?',
+        (plan_id,)
+    ).fetchone()['m']
+
+    db.execute(
+        '''INSERT INTO meal_plan_item (meal_plan_id, recipe_id, free_text, slot_label, sort_order)
+           VALUES (?, ?, ?, ?, ?)''',
+        (plan_id, rid, free_text or None, slot_label, max_order + 1)
+    )
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=plan_id))
+
+
+@app.route('/plan/item/<int:item_id>/delete', methods=['POST'])
+def plan_item_delete(item_id):
+    db = get_db()
+    item = db.execute('SELECT meal_plan_id FROM meal_plan_item WHERE id = ?', (item_id,)).fetchone()
+    if item is None:
+        flash('Item not found.')
+        return redirect(url_for('meal_plan_list'))
+    db.execute('DELETE FROM meal_plan_item WHERE id = ?', (item_id,))
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=item['meal_plan_id']))
+
+
+# ── Meal Plan Day Notes ──────────────────────────────────────────────────────
+
+@app.route('/plan/<int:plan_id>/day-note', methods=['POST'])
+def day_note_save(plan_id):
+    db = get_db()
+    day = request.form.get('day', '').strip()
+    content = request.form.get('content', '').strip()
+    if not day:
+        return redirect(url_for('plan_detail', plan_id=plan_id))
+
+    existing = db.execute(
+        'SELECT id FROM meal_plan_day_note WHERE meal_plan_id = ? AND day = ?',
+        (plan_id, day)
+    ).fetchone()
+
+    if content:
+        if existing:
+            db.execute('UPDATE meal_plan_day_note SET content = ? WHERE id = ?',
+                       (content, existing['id']))
+        else:
+            db.execute('INSERT INTO meal_plan_day_note (meal_plan_id, day, content) VALUES (?, ?, ?)',
+                       (plan_id, day, content))
+    elif existing:
+        db.execute('DELETE FROM meal_plan_day_note WHERE id = ?', (existing['id'],))
+
+    db.commit()
+    return redirect(url_for('plan_detail', plan_id=plan_id))
 
 
 # ── Event Photos ──────────────────────────────────────────────────────────────

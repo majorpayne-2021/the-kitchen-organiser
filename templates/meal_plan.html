@@ -44,39 +44,71 @@
 <hr>
 
 {% if plan.plan_type == 'weekly' %}
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th></th>
-                {% for meal in meals %}
-                <th>{{ meal }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for day in days %}
-            <tr>
-                <td><strong>{{ day }}</strong></td>
-                {% for meal in meals %}
-                <td>
-                    {% for item in grid[day][meal] %}
-                        {% if item.recipe_id %}
-                        <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
-                        {% elif item.free_text %}
-                        <span>{{ item.free_text }}</span>
-                        {% endif %}
-                        {% if item.servings_override %}<br><small class="muted">({{ item.servings_override }} servings)</small>{% endif %}
-                    {% else %}
-                    <small class="muted">&mdash;</small>
-                    {% endfor %}
-                </td>
-                {% endfor %}
-            </tr>
+{% for day in days %}
+<div class="meal-day-card">
+    <div class="meal-day-header">
+        <h3>{{ day }}</h3>
+        {% if day_notes.get(day) %}
+        <span class="meal-day-note">{{ day_notes[day].content }}</span>
+        {% endif %}
+        <button type="button" class="btn-remove" onclick="toggleDayNote('{{ day }}')" title="Edit note">&#9998;</button>
+    </div>
+    <form method="post" action="{{ url_for('day_note_save', plan_id=plan.id) }}" id="day-note-{{ day }}" class="meal-day-note-form" style="display:none;">
+        <input type="hidden" name="day" value="{{ day }}">
+        <input type="text" name="content" value="{{ day_notes[day].content if day_notes.get(day) else '' }}" placeholder="Add a note for {{ day }} (e.g., John is over for dinner)">
+        <button type="submit" style="padding:4px 10px; font-size:0.8em;">Save</button>
+    </form>
+
+    {% for meal, meal_items in grid[day].items() %}
+    <div class="meal-slot">
+        <span class="meal-slot-label">{{ meal }}</span>
+        <div class="meal-slot-items">
+            {% for item in meal_items %}
+            <div class="meal-slot-item">
+                {% if item.recipe_id %}
+                <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
+                {% elif item.free_text %}
+                <span>{{ item.free_text }}</span>
+                {% endif %}
+                <form method="post" action="{{ url_for('plan_item_delete', item_id=item.id) }}" style="display:inline">
+                    <button type="submit" class="btn-remove" onclick="return confirm('Remove?')">&#215;</button>
+                </form>
+            </div>
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Add item form -->
+    <details class="meal-add-details">
+        <summary>+ Add dish</summary>
+        <form method="post" action="{{ url_for('plan_item_add', plan_id=plan.id) }}" class="meal-add-form">
+            <input type="hidden" name="day" value="{{ day }}">
+            <select name="meal" required>
+                {% for m in meals %}
+                <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+            </select>
+            <select name="recipe_id">
+                <option value="">— Pick a recipe —</option>
+                {% for r in recipes %}
+                <option value="{{ r.id }}">{{ r.title }}</option>
+                {% endfor %}
+            </select>
+            <span class="event-or">or</span>
+            <input type="text" name="free_text" placeholder="Type a dish">
+            <button type="submit">Add</button>
+        </form>
+    </details>
 </div>
+{% endfor %}
+
+<script>
+function toggleDayNote(day) {
+    const el = document.getElementById('day-note-' + day);
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+</script>
 
 {% else %}
 <!-- Event Menu by Category -->

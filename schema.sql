@@ -82,6 +82,14 @@ CREATE TABLE IF NOT EXISTS event_note (
     FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS meal_plan_day_note (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_plan_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    content TEXT NOT NULL,
+    FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS event_photo (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     meal_plan_id INTEGER NOT NULL,
