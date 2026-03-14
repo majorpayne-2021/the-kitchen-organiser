@@ -1029,6 +1029,15 @@ def gift_item_delete(item_id):
     return redirect(url_for('gift_detail', hamper_id=item['hamper_id']))
 
 
+@app.route('/gift/<int:hamper_id>/update-date', methods=['POST'])
+def gift_hamper_update_date(hamper_id):
+    db = get_db()
+    gift_date = request.form.get('gift_date', '').strip() or None
+    db.execute('UPDATE gift_hamper SET gift_date = ? WHERE id = ?', (gift_date, hamper_id))
+    db.commit()
+    return redirect(url_for('gift_detail', hamper_id=hamper_id))
+
+
 @app.route('/gift/<int:hamper_id>/photo', methods=['POST'])
 def gift_photo_upload(hamper_id):
     db = get_db()

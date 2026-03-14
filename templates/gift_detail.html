@@ -4,9 +4,14 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ hamper.title }}</h1>
-    {% if hamper.gift_date %}
-    <p class="subtitle">{{ hamper.gift_date|format_date }}</p>
-    {% endif %}
+    <p class="subtitle" id="date-display" onclick="document.getElementById('date-edit').style.display='flex'; this.style.display='none';" style="cursor:pointer;" title="Click to edit date">
+        {{ hamper.gift_date|format_date if hamper.gift_date else 'No date set — click to add' }}
+    </p>
+    <form method="post" action="{{ url_for('gift_hamper_update_date', hamper_id=hamper.id) }}" id="date-edit" style="display:none; align-items:center; gap:0.5rem;">
+        <input type="date" name="gift_date" value="{{ hamper.gift_date or '' }}">
+        <button type="submit" style="padding:4px 10px; font-size:0.85em;">Save</button>
+        <button type="button" class="btn-remove" onclick="document.getElementById('date-edit').style.display='none'; document.getElementById('date-display').style.display='';">Cancel</button>
+    </form>
 </div>
 
 <div class="event-stats" style="margin-bottom:1.5rem;">
