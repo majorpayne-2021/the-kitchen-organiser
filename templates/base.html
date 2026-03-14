@@ -1,38 +1,44 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Recipes{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <title>{% block title %}Recipe Manager{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
-    <nav class="container">
-        <ul>
-            <li><a href="{{ url_for('index') }}"><strong>Recipes</strong></a></li>
-        </ul>
-        <ul>
-            <li><a href="{{ url_for('recipe_new') }}">+ Add Recipe</a></li>
-            <li><a href="{{ url_for('ingredient_search') }}">Search by Ingredient</a></li>
-            <li><a href="{{ url_for('plan_list') }}">Meal Plans</a></li>
-        </ul>
+    <nav>
+        <div class="nav-inner">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">Recipe Manager</a>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>Recipes</a>
+                <a href="{{ url_for('ingredient_search') }}" {% if request.endpoint == 'ingredient_search' %}class="active"{% endif %}>What Can I Make?</a>
+                <a href="{{ url_for('meal_plan_list') }}" {% if request.endpoint == 'meal_plan_list' %}class="active"{% endif %}>Meal Plans</a>
+                <a href="{{ url_for('event_plan_list') }}" {% if request.endpoint == 'event_plan_list' %}class="active"{% endif %}>Event Plans</a>
+                <a href="{{ url_for('gift_list') }}" {% if request.endpoint == 'gift_list' %}class="active"{% endif %}>Gift Ideas</a>
+            </div>
+        </div>
     </nav>
 
-    <main class="container">
+    <main>
         {% with messages = get_flashed_messages() %}
         {% if messages %}
-        {% for msg in messages %}
-        <p role="alert">{{ msg }}</p>
-        {% endfor %}
+        <div class="flash-messages">
+            {% for msg in messages %}
+            <p class="flash">{{ msg }}</p>
+            {% endfor %}
+        </div>
         {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="container">
+    <footer>
         <small>Recipe Manager</small>
     </footer>
 </body>

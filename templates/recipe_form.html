@@ -2,61 +2,63 @@
 {% block title %}{{ 'Edit' if recipe else 'New' }} Recipe{% endblock %}
 
 {% block content %}
-<h1>{{ 'Edit' if recipe else 'New' }} Recipe</h1>
+<div class="page-header">
+    <h1>{{ 'Edit' if recipe else 'New' }} Recipe</h1>
+</div>
 
 <form method="post">
-    <label>
-        Title *
-        <input type="text" name="title" value="{{ recipe.title if recipe else '' }}" required>
-    </label>
-
-    <label>
-        Description
-        <textarea name="description" rows="2">{{ recipe.description if recipe else '' }}</textarea>
-    </label>
-
-    <div class="grid">
-        <label>
-            Prep Time (min)
-            <input type="number" name="prep_time" value="{{ recipe.prep_time if recipe and recipe.prep_time else '' }}" min="0">
-        </label>
-        <label>
-            Cook Time (min)
-            <input type="number" name="cook_time" value="{{ recipe.cook_time if recipe and recipe.cook_time else '' }}" min="0">
-        </label>
-        <label>
-            Servings
-            <input type="number" name="servings" value="{{ recipe.servings if recipe and recipe.servings else '' }}" min="1">
-        </label>
+    <div class="form-group">
+        <label for="title">Title *</label>
+        <input type="text" id="title" name="title" value="{{ recipe.title if recipe else '' }}" required>
     </div>
 
-    <label>
-        Source
-        <input type="text" name="source" value="{{ recipe.source if recipe else '' }}" placeholder="URL, book name, etc.">
-    </label>
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="2">{{ recipe.description if recipe else '' }}</textarea>
+    </div>
 
-    <label>
-        Ingredients (one per line)
-        <textarea name="ingredients" rows="10" placeholder="2 cups flour&#10;1/2 tsp salt&#10;3 large eggs&#10;1 cup milk">{{ ingredients_text }}</textarea>
-    </label>
-    <small>Enter each ingredient on its own line. Quantities and units are parsed automatically.</small>
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="prep_time">Prep Time (min)</label>
+            <input type="number" id="prep_time" name="prep_time" value="{{ recipe.prep_time if recipe and recipe.prep_time else '' }}" min="0">
+        </div>
+        <div class="form-group">
+            <label for="cook_time">Cook Time (min)</label>
+            <input type="number" id="cook_time" name="cook_time" value="{{ recipe.cook_time if recipe and recipe.cook_time else '' }}" min="0">
+        </div>
+        <div class="form-group">
+            <label for="servings">Servings</label>
+            <input type="number" id="servings" name="servings" value="{{ recipe.servings if recipe and recipe.servings else '' }}" min="1">
+        </div>
+    </div>
 
-    <label>
-        Steps (one per line)
-        <textarea name="steps" rows="8" placeholder="Preheat oven to 350°F&#10;Mix dry ingredients&#10;Add wet ingredients and stir">{{ steps_text }}</textarea>
-    </label>
+    <div class="form-group">
+        <label for="source">Source</label>
+        <input type="text" id="source" name="source" value="{{ recipe.source if recipe else '' }}" placeholder="URL, book name, etc.">
+    </div>
 
-    <label>
-        Tags (comma-separated)
-        <input type="text" name="tags" value="{{ tags_text }}" placeholder="italian, pasta, weeknight">
-    </label>
+    <div class="form-group">
+        <label for="ingredients">Ingredients (one per line)</label>
+        <textarea id="ingredients" name="ingredients" rows="10" placeholder="2 cups flour&#10;1/2 tsp salt&#10;3 large eggs&#10;1 cup milk">{{ ingredients_text }}</textarea>
+        <small>Enter each ingredient on its own line. Quantities and units are parsed automatically.</small>
+    </div>
 
-    <div class="grid">
+    <div class="form-group">
+        <label for="steps">Steps (one per line)</label>
+        <textarea id="steps" name="steps" rows="8" placeholder="Preheat oven to 350°F&#10;Mix dry ingredients&#10;Add wet ingredients and stir">{{ steps_text }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="tags">Tags (comma-separated)</label>
+        <input type="text" id="tags" name="tags" value="{{ tags_text }}" placeholder="italian, pasta, weeknight">
+    </div>
+
+    <div class="form-actions">
         <button type="submit">Save Recipe</button>
         {% if recipe %}
-        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" role="button" class="outline">Cancel</a>
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-outline">Cancel</a>
         {% else %}
-        <a href="{{ url_for('index') }}" role="button" class="outline">Cancel</a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline">Cancel</a>
         {% endif %}
     </div>
 </form>

@@ -2,16 +2,16 @@
 {% block title %}{{ plan.name }}{% endblock %}
 
 {% block content %}
-<hgroup>
+<div class="page-header">
     <h1>{{ plan.name }}</h1>
-    <p>{{ 'Weekly Plan' if plan.plan_type == 'weekly' else 'Event Menu' }}</p>
-</hgroup>
+    <p class="subtitle">{{ 'Weekly Plan' if plan.plan_type == 'weekly' else 'Event Menu' }}</p>
+</div>
 
-<div>
-    <a href="{{ url_for('plan_edit', plan_id=plan.id) }}" role="button" class="outline">Edit</a>
-    <a href="{{ url_for('grocery_list', plan_id=plan.id) }}" role="button" class="outline">Grocery List</a>
+<div class="recipe-actions">
+    <a href="{{ url_for('plan_edit', plan_id=plan.id) }}" class="btn btn-outline">Edit</a>
+    <a href="{{ url_for('grocery_list', plan_id=plan.id) }}" class="btn btn-outline">Grocery List</a>
     <form method="post" action="{{ url_for('plan_delete', plan_id=plan.id) }}" style="display:inline">
-        <button type="submit" class="outline secondary" onclick="return confirm('Delete this plan?')">Delete</button>
+        <button type="submit" class="btn-remove" onclick="return confirm('Delete this plan?')">Delete</button>
     </form>
 </div>
 
@@ -36,9 +36,9 @@
                 <td>
                     {% for item in grid[day][meal] %}
                     <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
-                    {% if item.servings_override %}<br><small>({{ item.servings_override }} servings)</small>{% endif %}
+                    {% if item.servings_override %}<br><small class="muted">({{ item.servings_override }} servings)</small>{% endif %}
                     {% else %}
-                    <small>—</small>
+                    <small class="muted">&mdash;</small>
                     {% endfor %}
                 </td>
                 {% endfor %}
@@ -49,14 +49,13 @@
 </div>
 
 {% else %}
-<!-- Event Menu -->
 {% for course, course_items in courses.items() %}
 <h3>{{ course }}</h3>
 <ul>
     {% for item in course_items %}
     <li>
         <a href="{{ url_for('recipe_detail', recipe_id=item.recipe_id) }}">{{ item.recipe_title }}</a>
-        {% if item.servings_override %}<small> ({{ item.servings_override }} servings)</small>{% endif %}
+        {% if item.servings_override %}<small class="muted"> ({{ item.servings_override }} servings)</small>{% endif %}
     </li>
     {% endfor %}
 </ul>
@@ -64,6 +63,6 @@
 {% endif %}
 
 {% if not items %}
-<p>No recipes assigned yet. <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit this plan</a> to add recipes.</p>
+<p class="empty-state">No recipes assigned yet. <a href="{{ url_for('plan_edit', plan_id=plan.id) }}">Edit this plan</a> to add recipes.</p>
 {% endif %}
 {% endblock %}

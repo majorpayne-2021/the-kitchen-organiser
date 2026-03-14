@@ -70,3 +70,12 @@ CREATE TABLE IF NOT EXISTS meal_plan_item (
     FOREIGN KEY (meal_plan_id) REFERENCES meal_plan(id) ON DELETE CASCADE,
     FOREIGN KEY (recipe_id) REFERENCES recipe(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS gift_idea (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient TEXT NOT NULL,
+    idea TEXT NOT NULL,
+    occasion TEXT,
+    purchased INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

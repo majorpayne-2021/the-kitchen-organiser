@@ -1,11 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Search by Ingredient{% endblock %}
+{% block title %}What Can I Make?{% endblock %}
 
 {% block content %}
-<h1>What Can I Make?</h1>
-<p>Enter the ingredients you have on hand, separated by commas.</p>
+<div class="page-header">
+    <h1>What Can I Make?</h1>
+    <p class="subtitle">Enter the ingredients you have on hand, separated by commas.</p>
+</div>
 
-<form method="post">
+<form method="post" class="form-group">
     <textarea name="ingredients" rows="3" placeholder="chicken, garlic, lemon, olive oil, rice">{{ search_text }}</textarea>
     <button type="submit">Search</button>
 </form>
@@ -13,32 +15,23 @@
 {% if results %}
 <h2>Results</h2>
 {% for r in results %}
-<article>
-    <header>
-        <div class="grid">
-            <div>
-                <a href="{{ url_for('recipe_detail', recipe_id=r.recipe.id) }}">
-                    <strong>{{ r.recipe.title }}</strong>
-                </a>
-            </div>
-            <div style="text-align: right">
-                <strong>{{ r.match_pct }}% match</strong>
-            </div>
-        </div>
-    </header>
-    <div class="grid">
-        <div>
-            <small><strong>You have:</strong> {{ r.matched|join(', ') }}</small>
-        </div>
-        {% if r.missing %}
-        <div>
-            <small><strong>You need:</strong> {{ r.missing|join(', ') }}</small>
-        </div>
-        {% endif %}
+<div class="plan-card">
+    <div class="plan-card-body">
+        <a href="{{ url_for('recipe_detail', recipe_id=r.recipe.id) }}">
+            <strong>{{ r.recipe.title }}</strong>
+        </a>
+        <small>
+            <span style="color: var(--color-accent);">You have:</span> {{ r.matched|join(', ') }}
+            {% if r.missing %}<br><span class="muted">You need:</span> {{ r.missing|join(', ') }}{% endif %}
+        </small>
     </div>
-</article>
+    <div style="text-align:right;">
+        <span class="card-number" style="font-size:1.6rem;">{{ r.match_pct }}%</span>
+        <br><small class="muted">match</small>
+    </div>
+</div>
 {% endfor %}
 {% elif search_text %}
-<p>No matching recipes found.</p>
+<p class="empty-state">No matching recipes found.</p>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="dashboard-hero">
+    <h1>Recipe Manager</h1>
+    <p class="subtitle">Your personal kitchen companion</p>
+</div>
+
+<div class="dashboard-grid">
+    <a href="{{ url_for('index') }}" class="dashboard-card">
+        <span class="card-number">{{ recipe_count }}</span>
+        <span class="card-label">Recipe{{ 's' if recipe_count != 1 }}</span>
+    </a>
+    <a href="{{ url_for('meal_plan_list') }}" class="dashboard-card">
+        <span class="card-number">{{ meal_plan_count }}</span>
+        <span class="card-label">Meal Plan{{ 's' if meal_plan_count != 1 }}</span>
+    </a>
+    <a href="{{ url_for('event_plan_list') }}" class="dashboard-card">
+        <span class="card-number">{{ event_plan_count }}</span>
+        <span class="card-label">Event Plan{{ 's' if event_plan_count != 1 }}</span>
+    </a>
+    <a href="{{ url_for('gift_list') }}" class="dashboard-card">
+        <span class="card-number">{{ gift_count }}</span>
+        <span class="card-label">Gift Idea{{ 's' if gift_count != 1 }}</span>
+    </a>
+</div>
+
+{% if recent_recipes %}
+<section class="dashboard-section">
+    <h2>Recently Added</h2>
+    <div class="recipe-grid">
+        {% for recipe in recent_recipes %}
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="recipe-card">
+            {% if recipe.photo %}
+            <img src="{{ url_for('static', filename='photos/thumb_' + recipe.photo) }}"
+                 alt="{{ recipe.title }}" loading="lazy"
+                 onerror="this.src='{{ url_for('static', filename='photos/' + recipe.photo) }}'">
+            {% else %}
+            <div class="no-photo">No Photo</div>
+            {% endif %}
+            <div class="recipe-card-body">
+                <strong>{{ recipe.title }}</strong>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

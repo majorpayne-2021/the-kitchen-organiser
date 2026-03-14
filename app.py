@@ -9,7 +9,7 @@ from flask import (
     Flask, render_template, request, redirect, url_for, g, flash, jsonify,
     send_from_directory,
 )
-from PIL import Image
+from PIL import Image, ImageOps
 
 from helpers import parse_ingredient, guess_category, aggregate_grocery_list, search_by_ingredients
 
@@ -77,36 +77,66 @@ def fromjson_filter(s):
         return []
 
 
-# ── Recipe Routes ─────────────────────────────────────────────────────────────
+# ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route('/')
+def dashboard():
+    db = get_db()
+    recipe_count = db.execute('SELECT COUNT(*) as cnt FROM recipe').fetchone()['cnt']
+    meal_plan_count = db.execute("SELECT COUNT(*) as cnt FROM meal_plan WHERE plan_type = 'weekly'").fetchone()['cnt']
+    event_plan_count = db.execute("SELECT COUNT(*) as cnt FROM meal_plan WHERE plan_type = 'event'").fetchone()['cnt']
+    gift_count = db.execute('SELECT COUNT(*) as cnt FROM gift_idea').fetchone()['cnt']
+    recent_recipes = db.execute('''
+        SELECT r.*, p.filename AS photo FROM recipe r
+        LEFT JOIN photo p ON p.recipe_id = r.id AND p.is_primary = 1
+        ORDER BY r.created_at DESC LIMIT 4
+    ''').fetchall()
+    return render_template('dashboard.html', recipe_count=recipe_count,
+                           meal_plan_count=meal_plan_count, event_plan_count=event_plan_count,
+                           gift_count=gift_count, recent_recipes=recent_recipes)
+
+
+# ── Recipe Routes ─────────────────────────────────────────────────────────────
+
+@app.route('/recipes')
 def index():
     db = get_db()
     tag_filter = request.args.get('tag', '')
     search_query = request.args.get('q', '')
 
     query = '''
-        SELECT r.*, p.filename AS photo
+        SELECT DISTINCT r.*, p.filename AS photo
         FROM recipe r
         LEFT JOIN photo p ON p.recipe_id = r.id AND p.is_primary = 1
+        LEFT JOIN ingredient i ON i.recipe_id = r.id
+        LEFT JOIN recipe_tag rt ON rt.recipe_id = r.id
+        LEFT JOIN tag t ON t.id = rt.tag_id
     '''
     params = []
+    conditions = []
 
     if tag_filter:
-        query += '''
-            JOIN recipe_tag rt ON rt.recipe_id = r.id
-            JOIN tag t ON t.id = rt.tag_id AND t.name = ?
-        '''
+        conditions.append('t.name = ?')
         params.append(tag_filter)
 
     if search_query:
-        query += ' WHERE r.title LIKE ?' if 'WHERE' not in query else ' AND r.title LIKE ?'
-        params.append(f'%{search_query}%')
+        conditions.append(
+            '(r.title LIKE ? OR r.description LIKE ? OR r.source LIKE ? OR r.steps LIKE ? OR i.name LIKE ? OR t.name LIKE ?)'
+        )
+        like = f'%{search_query}%'
+        params.extend([like, like, like, like, like, like])
+
+    if conditions:
+        query += ' WHERE ' + ' AND '.join(conditions)
 
     query += ' ORDER BY r.updated_at DESC'
     recipes = db.execute(query, params).fetchall()
 
-    tags = db.execute('SELECT DISTINCT name FROM tag ORDER BY name').fetchall()
+    tags = db.execute('''
+        SELECT DISTINCT t.name FROM tag t
+        JOIN recipe_tag rt ON rt.tag_id = t.id
+        ORDER BY t.name
+    ''').fetchall()
     return render_template('index.html', recipes=recipes, tags=tags,
                            current_tag=tag_filter, search_query=search_query)
 
@@ -298,12 +328,15 @@ def photo_upload(recipe_id):
     filepath = os.path.join(PHOTO_DIR, filename)
     file.save(filepath)
 
-    # Generate thumbnail
+    # Fix orientation from EXIF and generate thumbnail
     try:
         img = Image.open(filepath)
-        img.thumbnail(THUMB_SIZE)
+        img = ImageOps.exif_transpose(img)
+        img.save(filepath)
+        thumb = img.copy()
+        thumb.thumbnail(THUMB_SIZE)
         thumb_path = os.path.join(PHOTO_DIR, f'thumb_{filename}')
-        img.save(thumb_path)
+        thumb.save(thumb_path)
     except Exception:
         pass  # Still save photo even if thumbnail fails
 
@@ -371,6 +404,24 @@ def note_add(recipe_id):
     return redirect(url_for('recipe_detail', recipe_id=recipe_id))
 
 
+@app.route('/note/<int:note_id>/edit', methods=['POST'])
+def note_edit(note_id):
+    db = get_db()
+    note = db.execute('SELECT * FROM note WHERE id = ?', (note_id,)).fetchone()
+    if note is None:
+        flash('Note not found.')
+        return redirect(url_for('index'))
+
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Note cannot be empty.')
+        return redirect(url_for('recipe_detail', recipe_id=note['recipe_id']))
+
+    db.execute('UPDATE note SET content = ? WHERE id = ?', (content, note_id))
+    db.commit()
+    return redirect(url_for('recipe_detail', recipe_id=note['recipe_id']))
+
+
 @app.route('/note/<int:note_id>/delete', methods=['POST'])
 def note_delete(note_id):
     db = get_db()
@@ -411,6 +462,22 @@ def plan_list():
     db = get_db()
     plans = db.execute('SELECT * FROM meal_plan ORDER BY created_at DESC').fetchall()
     return render_template('plan_list.html', plans=plans)
+
+
+@app.route('/meal-plans')
+def meal_plan_list():
+    db = get_db()
+    plans = db.execute("SELECT * FROM meal_plan WHERE plan_type = 'weekly' ORDER BY created_at DESC").fetchall()
+    return render_template('plan_list.html', plans=plans, plan_type='weekly',
+                           page_title='Meal Plans', page_subtitle='Weekly meal plans')
+
+
+@app.route('/event-plans')
+def event_plan_list():
+    db = get_db()
+    plans = db.execute("SELECT * FROM meal_plan WHERE plan_type = 'event' ORDER BY created_at DESC").fetchall()
+    return render_template('plan_list.html', plans=plans, plan_type='event',
+                           page_title='Event Plans', page_subtitle='Hosting menus and events')
 
 
 @app.route('/plan/new', methods=['GET', 'POST'])
@@ -591,7 +658,50 @@ def api_recipes():
     return jsonify([{'id': r['id'], 'title': r['title']} for r in recipes])
 
 
+# ── Gift Ideas ────────────────────────────────────────────────────────────────
+
+@app.route('/gifts')
+def gift_list():
+    db = get_db()
+    gifts = db.execute('SELECT * FROM gift_idea ORDER BY purchased, recipient, created_at DESC').fetchall()
+    gifts_by_recipient = {}
+    for gift in gifts:
+        gifts_by_recipient.setdefault(gift['recipient'], []).append(gift)
+    return render_template('gifts.html', gifts_by_recipient=gifts_by_recipient)
+
+
+@app.route('/gift/add', methods=['POST'])
+def gift_add():
+    db = get_db()
+    recipient = request.form.get('recipient', '').strip()
+    idea = request.form.get('idea', '').strip()
+    occasion = request.form.get('occasion', '').strip()
+    if not recipient or not idea:
+        flash('Recipient and idea are required.')
+        return redirect(url_for('gift_list'))
+    db.execute('INSERT INTO gift_idea (recipient, idea, occasion) VALUES (?, ?, ?)',
+               (recipient, idea, occasion or None))
+    db.commit()
+    return redirect(url_for('gift_list'))
+
+
+@app.route('/gift/<int:gift_id>/toggle', methods=['POST'])
+def gift_toggle(gift_id):
+    db = get_db()
+    db.execute('UPDATE gift_idea SET purchased = NOT purchased WHERE id = ?', (gift_id,))
+    db.commit()
+    return redirect(url_for('gift_list'))
+
+
+@app.route('/gift/<int:gift_id>/delete', methods=['POST'])
+def gift_delete(gift_id):
+    db = get_db()
+    db.execute('DELETE FROM gift_idea WHERE id = ?', (gift_id,))
+    db.commit()
+    return redirect(url_for('gift_list'))
+
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=8080)
