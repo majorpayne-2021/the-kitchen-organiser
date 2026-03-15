@@ -13,7 +13,7 @@
 <body>
     <nav>
         <div class="nav-inner">
-            <a href="{{ url_for('dashboard') }}" class="nav-brand">The Kitchen Table</a>
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">The Kitchen Table <span class="nav-subtitle">Plan, Cook &amp; Gather</span></a>
             <div class="nav-links">
                 <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>Recipes</a>
                 <a href="{{ url_for('ingredient_search') }}" {% if request.endpoint == 'ingredient_search' %}class="active"{% endif %}>What Can I Make?</a>
