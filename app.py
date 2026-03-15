@@ -15,12 +15,30 @@ from helpers import parse_ingredient, guess_category, aggregate_grocery_list, se
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+app.jinja_env.auto_reload = False
+app.config['TEMPLATES_AUTO_RELOAD'] = False
 
 DATABASE = os.path.join(app.root_path, 'recipes.db')
 PHOTO_DIR = os.path.join(app.static_folder, 'photos')
 THUMB_SIZE = (400, 400)
 
 os.makedirs(PHOTO_DIR, exist_ok=True)
+
+# Pre-load all templates into Jinja's bytecode cache at startup
+# This prevents OSError deadlocks on file reads after macOS sleep/wake
+import time as _time
+with app.app_context():
+    templates_dir = os.path.join(app.root_path, 'templates')
+    for template_name in sorted(os.listdir(templates_dir)):
+        if template_name.endswith('.html'):
+            for attempt in range(5):
+                try:
+                    app.jinja_env.get_template(template_name)
+                    break
+                except OSError:
+                    _time.sleep(1)
+                except Exception:
+                    break
 
 
 # ── Database ──────────────────────────────────────────────────────────────────
@@ -1188,4 +1206,6 @@ def gift_hamper_delete(hamper_id):
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    import sys
+    debug = '--debug' in sys.argv
+    app.run(debug=debug, port=8080)
