@@ -1,6 +1,9 @@
 recipes.db
 static/photos/*
 !static/photos/.gitkeep
+seed/photos/*
+!seed/photos/*.jpg
+!seed/photos/*.jpeg
 __pycache__/
 *.pyc
 .DS_Store

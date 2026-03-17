@@ -12,6 +12,7 @@ from flask import (
 from PIL import Image, ImageOps
 
 from helpers import parse_ingredient, guess_category, aggregate_grocery_list, search_by_ingredients
+from seed import seed_db
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -81,6 +82,7 @@ def ensure_db():
     ).fetchone()
     if table is None:
         init_db()
+        seed_db(get_db())
 
 
 # ── Template Helpers ──────────────────────────────────────────────────────────
