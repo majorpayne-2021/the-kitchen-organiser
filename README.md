@@ -39,6 +39,8 @@
 - Organised by grocery aisle category (Produce, Meat, Dairy, Pantry, etc.)
 - Printable layout
 
+![Grocery list](docs/screenshot_grocery.png)
+
 **Event Planning**
 - Event-based plans with guest management and RSVP tracking
 - Dietary notes per guest
@@ -51,6 +53,8 @@
 - Gift hampers with item checklists and progress tracking
 - Inspiration photo uploads
 - Upcoming and past gift views
+
+![Gift tracking](docs/screenshot_gift.png)
 
 ## Tech Stack
 
