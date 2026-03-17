@@ -105,7 +105,7 @@ This starts the app at login and restarts it automatically if it crashes.
 ## Project Structure
 
 ```
-recipes/
+the-kitchen-organiser/
 ├── app.py               # Application routes and request handlers (57 endpoints)
 ├── helpers.py           # Ingredient parsing, grocery aggregation, recipe search
 ├── schema.sql           # Database schema (14 tables)
