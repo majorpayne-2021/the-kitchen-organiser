@@ -1,6 +1,6 @@
 # The Kitchen Organiser
 
-> A local-first web app for meal planning, recipe management, grocery lists, event hosting, and gift tracking — all in one place.
+> A personal kitchen management app that runs entirely on your computer — no cloud, no accounts, no subscriptions. A Flask web server starts automatically at login, stores all your data in a local SQLite database, and serves a responsive web interface through your browser. Manage recipes, plan weekly meals, generate grocery lists, organise events, and track gift ideas — all in one place.
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.1-lightgrey)
