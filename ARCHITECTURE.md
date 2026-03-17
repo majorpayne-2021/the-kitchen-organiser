@@ -4,6 +4,211 @@ This document explains the key technical choices behind The Kitchen Organiser �
 
 ---
 
+## System Overview
+
+How the main components of the app connect together. The browser talks to Flask, Flask talks to the database and file system, and launchd keeps everything running.
+
+```mermaid
+flowchart TB
+    subgraph User["Your Computer"]
+        Browser["Browser\n(localhost:8080)"]
+
+        subgraph App["The Kitchen Organiser"]
+            Flask["Flask\n(app.py)\nHandles all requests"]
+            Helpers["Helpers\n(helpers.py)\nIngredient parsing\nGrocery aggregation\nRecipe search"]
+            Templates["Jinja2 Templates\n(templates/)\n12 HTML files"]
+        end
+
+        SQLite["SQLite Database\n(recipes.db)\nRecipes, ingredients,\nmeal plans, gifts"]
+        Photos["Photo Storage\n(static/photos/)\nFull images + thumbnails"]
+        Pillow["Pillow\nImage processing\nThumbnail generation"]
+        LaunchD["launchd\n(Launch Agent)\nAuto-start at login\nRestart on crash"]
+    end
+
+    Browser -->|"HTTP request\n(e.g. GET /recipes)"| Flask
+    Flask -->|"HTML response"| Browser
+    Flask --> Helpers
+    Flask --> Templates
+    Flask -->|"Read/write data"| SQLite
+    Flask -->|"Save/serve images"| Photos
+    Flask -->|"Resize on upload"| Pillow
+    Pillow -->|"Save thumbnail"| Photos
+    LaunchD -->|"Starts and monitors"| Flask
+```
+
+---
+
+## Database Schema
+
+How the 14 tables in the database relate to each other. Arrows show foreign key relationships — for example, each ingredient belongs to one recipe, and each recipe can have many ingredients.
+
+```mermaid
+erDiagram
+    recipe {
+        int id PK
+        text title
+        text description
+        int prep_time
+        int cook_time
+        int servings
+        text source
+        text steps "JSON array"
+    }
+
+    ingredient {
+        int id PK
+        int recipe_id FK
+        text name
+        real quantity
+        text unit
+        text grocery_category
+        int sort_order
+    }
+
+    photo {
+        int id PK
+        int recipe_id FK
+        text filename
+        text caption
+        int is_primary
+    }
+
+    note {
+        int id PK
+        int recipe_id FK
+        text content
+    }
+
+    tag {
+        int id PK
+        text name
+    }
+
+    recipe_tag {
+        int recipe_id FK
+        int tag_id FK
+    }
+
+    meal_plan {
+        int id PK
+        text name
+        text plan_type "weekly or event"
+        text event_date
+        text event_time
+    }
+
+    meal_plan_item {
+        int id PK
+        int meal_plan_id FK
+        int recipe_id FK "optional"
+        text free_text "optional"
+        text slot_label "e.g. Monday Dinner"
+        int servings_override
+    }
+
+    meal_plan_day_note {
+        int id PK
+        int meal_plan_id FK
+        text day
+        text content
+    }
+
+    event_note {
+        int id PK
+        int meal_plan_id FK
+        text content
+    }
+
+    event_photo {
+        int id PK
+        int meal_plan_id FK
+        text filename
+    }
+
+    event_invitee {
+        int id PK
+        int meal_plan_id FK
+        text name
+        text rsvp "pending, attending, not attending"
+        text dietary
+    }
+
+    gift_hamper {
+        int id PK
+        text title
+        text gift_date
+    }
+
+    gift_hamper_item {
+        int id PK
+        int hamper_id FK
+        text description
+        int checked
+        text note
+    }
+
+    gift_photo {
+        int id PK
+        int hamper_id FK
+        text filename
+    }
+
+    recipe ||--o{ ingredient : "has"
+    recipe ||--o{ photo : "has"
+    recipe ||--o{ note : "has"
+    recipe ||--o{ recipe_tag : "tagged with"
+    tag ||--o{ recipe_tag : "applied to"
+    recipe ||--o{ meal_plan_item : "used in"
+    meal_plan ||--o{ meal_plan_item : "contains"
+    meal_plan ||--o{ meal_plan_day_note : "has"
+    meal_plan ||--o{ event_note : "has"
+    meal_plan ||--o{ event_photo : "has"
+    meal_plan ||--o{ event_invitee : "has"
+    gift_hamper ||--o{ gift_hamper_item : "contains"
+    gift_hamper ||--o{ gift_photo : "has"
+```
+
+---
+
+## Request Flow
+
+What happens step by step when you visit a page — from typing the URL to seeing the result. This example shows loading the recipe list page.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant F as Flask (app.py)
+    participant T as Jinja2 Template
+    participant DB as SQLite Database
+
+    B->>F: GET /recipes
+    Note over F: URL maps to the index() function
+
+    F->>DB: Do tables exist?
+    DB-->>F: Yes
+    Note over F: ensure_db() check passes
+
+    F->>DB: SELECT all recipes
+    DB-->>F: Recipe rows
+    F->>DB: SELECT all tags
+    DB-->>F: Tag rows
+    F->>DB: SELECT primary photo for each recipe
+    DB-->>F: Photo filenames
+
+    F->>T: Render index.html with recipe data
+    T-->>F: Complete HTML page
+
+    F-->>B: HTML response
+    Note over B: Browser displays the recipe grid
+    Note over B: Photos load from /static/photos/
+```
+
+---
+
+## Detailed Decisions
+
+---
+
 ## 1. Flask as the Web Framework
 
 **What it is:** Flask is a lightweight Python web framework. It handles incoming web requests (like when you visit a page) and sends back HTML responses.
