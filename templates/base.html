@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}The Kitchen Table{% endblock %}</title>
+    <title>{% block title %}The Kitchen Organiser{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 <body>
     <nav>
         <div class="nav-inner">
-            <a href="{{ url_for('dashboard') }}" class="nav-brand">The Kitchen Table <span class="nav-subtitle">Plan, Cook &amp; Gather</span></a>
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">The Kitchen Organiser <span class="nav-subtitle">Plan, Cook &amp; Gather</span></a>
             <div class="nav-links">
                 <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>Recipes</a>
                 <a href="{{ url_for('ingredient_search') }}" {% if request.endpoint == 'ingredient_search' %}class="active"{% endif %}>What Can I Make?</a>
@@ -39,7 +39,7 @@
     </main>
 
     <footer>
-        <small>The Kitchen Table</small>
+        <small>The Kitchen Organiser</small>
     </footer>
 </body>
 </html>
