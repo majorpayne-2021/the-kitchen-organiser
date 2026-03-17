@@ -79,7 +79,7 @@
 ```bash
 # Clone the repository
 git clone https://github.com/majorpayne-2021/the-kitchen-organiser.git
-cd recipes
+cd the-kitchen-organiser
 
 # Create and activate the conda environment
 conda env create -f environment.yml
