@@ -146,6 +146,8 @@ After macOS sleep/wake cycles, file I/O can deadlock when Flask lazy-loads templ
 **Why launchd over Docker?**
 For a personal macOS app, a Launch Agent is native, lightweight, and requires no additional tooling. Docker would add unnecessary complexity for a single-user, single-machine deployment.
 
+For the full deep-dive into all technical decisions, trade-offs, and what would change at scale, see the [Architecture Decision Record](ARCHITECTURE.md).
+
 ## Licence
 
 This project is available under the [MIT Licence](LICENCE).
