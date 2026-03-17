@@ -74,7 +74,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/majorpayne-2021/recipes.git
+git clone https://github.com/majorpayne-2021/the-kitchen-organiser.git
 cd recipes
 
 # Create and activate the conda environment
