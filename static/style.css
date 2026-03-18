@@ -111,6 +111,18 @@ nav {
     margin-top: -2px;
 }
 
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 4px 8px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
 .nav-links {
     display: flex;
     gap: 2rem;
@@ -1102,27 +1114,64 @@ summary:hover {
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
+/* ── PWA standalone mode ─────────────────────────────────────────────────── */
+
+@media (display-mode: standalone) {
+    body { padding-top: env(safe-area-inset-top); }
+    nav { padding-top: env(safe-area-inset-top); }
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+
 @media (max-width: 768px) {
+    :root {
+        --spacing: 1rem;
+    }
+
     .nav-inner {
-        flex-direction: column;
+        flex-wrap: wrap;
         height: auto;
         padding: 0.75rem var(--spacing);
-        gap: 0.5rem;
+    }
+
+    .nav-toggle {
+        display: block;
     }
 
     .nav-links {
-        gap: 1rem;
-        flex-wrap: wrap;
-        justify-content: center;
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        gap: 0;
+        padding-top: 0.5rem;
+    }
+
+    nav.open .nav-links {
+        display: flex;
     }
 
     .nav-links a {
-        font-size: 0.75rem;
+        font-size: 0.85rem;
+        padding: 0.7rem 0;
+        border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .nav-links a:last-child {
+        border-bottom: none;
     }
 
     .recipe-columns {
         grid-template-columns: 1fr;
         gap: 2rem;
+    }
+
+    .recipe-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+    }
+
+    .recipe-card img, .no-photo {
+        height: 150px;
     }
 
     .form-grid {
@@ -1133,11 +1182,51 @@ summary:hover {
         flex-direction: column;
     }
 
+    .photo-gallery {
+        grid-template-columns: 1fr;
+    }
+
+    .event-menu-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .event-stats {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
     h1 { font-size: 1.8rem; }
     h2 { font-size: 1.4rem; }
 
     .dashboard-hero h1 {
-        font-size: 2.2rem;
+        font-size: 2rem;
+    }
+
+    /* Larger touch targets */
+    .btn, button[type="submit"], input[type="submit"] {
+        padding: 0.7rem 1.5rem;
+        min-height: 44px;
+    }
+
+    .btn-remove {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .gift-check {
+        width: 32px;
+        height: 32px;
+    }
+
+    .plan-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 

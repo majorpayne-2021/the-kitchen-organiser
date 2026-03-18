@@ -25,9 +25,37 @@ THUMB_SIZE = (400, 400)
 
 os.makedirs(PHOTO_DIR, exist_ok=True)
 
-# Pre-load all templates into Jinja's bytecode cache at startup
-# This prevents OSError deadlocks on file reads after macOS sleep/wake
+# Pre-load all templates at startup and pin them in Jinja's cache so that
+# the loader never re-reads from disk.  This prevents the macOS
+# "OSError: [Errno 11] Resource deadlock avoided" that occurs when
+# sleep/wake cycles leave the kernel file-lock table in a bad state.
 import time as _time
+from jinja2 import BaseLoader, TemplateNotFound
+
+class _PinnedLoader(BaseLoader):
+    """Wraps the default Flask loader but pins every template after first load.
+
+    Once a template has been successfully read from disk its source is kept
+    in memory.  Subsequent calls return the cached source with an *uptodate*
+    callback that always returns ``True``, so Jinja never touches the
+    filesystem again for that template.
+    """
+
+    def __init__(self, original_loader):
+        self._inner = original_loader
+        self._cache = {}            # template name -> (source, filename)
+
+    def get_source(self, environment, template):
+        if template in self._cache:
+            source, filename = self._cache[template]
+            return source, filename, lambda: True   # always up-to-date
+
+        source, filename, _ = self._inner.get_source(environment, template)
+        self._cache[template] = (source, filename)
+        return source, filename, lambda: True
+
+app.jinja_loader = _PinnedLoader(app.jinja_loader)
+
 with app.app_context():
     templates_dir = os.path.join(app.root_path, 'templates')
     for template_name in sorted(os.listdir(templates_dir)):
@@ -1205,9 +1233,17 @@ def gift_hamper_delete(hamper_id):
     return redirect(url_for('gift_list'))
 
 
+# ── PWA service-worker (must be served from root scope) ───────────────────────
+
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory(app.static_folder, 'sw.js',
+                               mimetype='application/javascript')
+
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
     import sys
     debug = '--debug' in sys.argv
-    app.run(debug=debug, port=8080)
+    app.run(debug=debug, host='0.0.0.0', port=8080)

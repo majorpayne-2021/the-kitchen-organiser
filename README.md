@@ -91,6 +91,14 @@ python app.py
 
 The app runs at **http://localhost:8080**.
 
+### Access from Your Phone
+
+The app can be accessed from any device on the same Wi-Fi network — phone, tablet, or another computer. Find your Mac's local IP address (System Settings → Wi-Fi → Details → IP Address) and visit `http://<your-ip>:8080` from the other device.
+
+On a phone you can install it as a home-screen app for a native feel:
+- **iPhone**: Tap the Share button → "Add to Home Screen"
+- **Android**: Tap the browser menu → "Add to Home Screen" (or accept the install prompt)
+
 ### Auto-Start (optional)
 
 A launchd plist is included to run the server as a background service on macOS:
