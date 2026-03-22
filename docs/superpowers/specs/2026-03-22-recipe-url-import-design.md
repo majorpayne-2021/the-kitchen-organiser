@@ -21,7 +21,7 @@ Currently, adding a recipe requires manual data entry. Most recipe websites embe
 
 - Detect YouTube URLs (`youtube.com/watch`, `youtu.be/`, `youtube.com/shorts/`)
 - Fetch the page HTML and extract the video description
-- Parse the description heuristically for recipe content (split on "Ingredients"/"Instructions" headers)
+- Parse the description heuristically for recipe content: look for section headers (case-insensitive) like "Ingredients", "INGREDIENTS", "What you need", "Instructions", "Method", "Directions", etc. Skip timestamp lines. If no headers found, treat the full description as unstructured text and pre-fill only title + source.
 - Extract the video title as the recipe title
 - Download the video thumbnail from `https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg` (fall back to `hqdefault.jpg`)
 
@@ -33,10 +33,11 @@ Currently, adding a recipe requires manual data entry. Most recipe websites embe
 | `description` | `description` | |
 | `prepTime` (ISO 8601) | `prep_time` | Converted to minutes via new `parse_iso_duration()` |
 | `cookTime` (ISO 8601) | `cook_time` | Converted to minutes via new `parse_iso_duration()` |
-| `recipeYield` | `servings` | Extract numeric value |
+| `recipeYield` | `servings` | Extract first integer found (handles "4 servings", "Makes 12", etc.) |
+| `recipeCategory` / `keywords` | tags | Optional: map to tags for pre-filling |
 | `recipeIngredient[]` / description lines | ingredients | Passed through existing `parse_ingredient()` |
-| `recipeInstructions[]` / description lines | `steps` | Normalized to plain text list |
-| `image` / YouTube thumbnail | photo | Downloaded, thumbnailed via existing Pillow pipeline |
+| `recipeInstructions[]` / description lines | `steps` | Extract `text` from `HowToStep` objects; flatten `HowToSection` groups; handle plain string and string array formats |
+| `image` / YouTube thumbnail | photo | Handle URL string, `ImageObject.url`, or array formats. Downloaded, thumbnailed via existing Pillow pipeline |
 | Source URL | `source` | Stored as-is |
 
 ## Architecture
@@ -46,7 +47,7 @@ Currently, adding a recipe requires manual data entry. Most recipe websites embe
 Contains all scraping logic, isolated from Flask routes:
 
 - `scrape_url(url: str) -> dict` — entry point, auto-detects source type and delegates
-- `scrape_recipe_site(url: str) -> dict` — Schema.org JSON-LD extraction
+- `scrape_recipe_site(url: str) -> dict` — Schema.org JSON-LD extraction (searches top-level and `@graph` arrays for `Recipe` type)
 - `scrape_youtube(url: str) -> dict` — YouTube description parsing
 - `parse_iso_duration(duration: str) -> int | None` — converts `PT1H30M` to `90`
 - `download_image(url: str, dest_dir: str) -> str | None` — downloads image, generates thumbnail, returns filename
@@ -64,15 +65,23 @@ Return format (shared by both scrapers):
     "ingredients": [str],         # raw lines, e.g. ["2 cups flour", "1 tsp salt"]
     "steps": [str],               # plain text steps
     "image_filename": str | None, # filename in static/photos/ (thumbnail also generated)
+    "tags": [str],                # from recipeCategory/keywords (optional)
 }
 ```
+
+All scraped text fields are stripped of HTML tags and HTML entities are decoded.
+
+### HTTP Requests
+
+- All `requests.get()` calls use a 10-second timeout
+- A browser-like `User-Agent` header is sent to avoid blocks from recipe sites
 
 ### Modified: `app.py`
 
 Two new routes:
 
 - `GET /recipe/import` — renders a simple form with a URL input
-- `POST /recipe/import` — calls `scrape_url()`, stores result in session, redirects to `/recipe/new?from_import=1`
+- `POST /recipe/import` — calls `scrape_url()`, stores scraped data in session, redirects to `/recipe/new?from_import=1`. The import form uses a standard form POST (not HTMX) since it triggers a full-page redirect.
 
 Modified route:
 
@@ -82,7 +91,16 @@ Modified route:
 
 - Pre-fill form fields from scraped data when provided
 - Show the downloaded image preview if one was scraped
+- Include a hidden `imported_photo` field with the image filename
 - Add an "Import from URL" button/link accessible from the recipe list or the empty new-recipe form
+
+### Photo Lifecycle
+
+1. `scrape_url()` downloads the image to `static/photos/` and generates a `thumb_` thumbnail using the existing Pillow pipeline
+2. The filename is stored in the session alongside other scraped data
+3. The recipe form includes a hidden `imported_photo` field with the filename
+4. `save_recipe()` is modified to check for this hidden field and insert a `photo` table row (marked as primary)
+5. If the user abandons the form, the orphaned image file remains in `static/photos/` — acceptable for a single-user local app
 
 ### Modified: `helpers.py`
 
