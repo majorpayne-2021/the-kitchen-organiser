@@ -1080,6 +1080,99 @@ th {
     margin-top: 1.5rem;
 }
 
+/* ── Import Section ──────────────────────────────────────────────────────── */
+
+.import-section {
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.import-section label {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.import-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.import-input {
+    flex: 1;
+}
+
+.import-section small {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+.import-preview-photo {
+    margin-bottom: 1.5rem;
+}
+
+.import-preview-photo img {
+    max-width: 300px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+}
+
+/* ── Brain Dump ──────────────────────────────────────────────────────────── */
+
+.braindump-form {
+    margin-bottom: 2rem;
+}
+
+.braindump-form textarea {
+    width: 100%;
+    margin-bottom: 0.75rem;
+}
+
+.braindump-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.braindump-note {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+}
+
+.braindump-note p {
+    margin-bottom: 0.5rem;
+    white-space: pre-wrap;
+}
+
+.braindump-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-text-light);
+}
+
+.btn-delete-small {
+    background: none;
+    border: none;
+    color: var(--color-text-light);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 0.3rem;
+    line-height: 1;
+}
+
+.btn-delete-small:hover {
+    color: #c44;
+}
+
 /* ── Details/Summary ─────────────────────────────────────────────────────── */
 
 details {

@@ -12,6 +12,7 @@ from flask import (
 from PIL import Image, ImageOps
 
 from helpers import parse_ingredient, guess_category, aggregate_grocery_list, search_by_ingredients
+from scraper import scrape_url
 from seed import seed_db
 
 app = Flask(__name__)
@@ -242,12 +243,49 @@ def index():
                            current_tag=tag_filter, search_query=search_query)
 
 
+@app.route('/recipe/import', methods=['POST'])
+def recipe_import():
+    """Scrape a recipe from a URL and redirect to the new recipe form pre-filled."""
+    url = request.form.get('url', '').strip()
+    if not url:
+        flash('Please enter a URL.')
+        return redirect(url_for('recipe_new'))
+
+    try:
+        data = scrape_url(url, PHOTO_DIR)
+    except ValueError as e:
+        flash(str(e))
+        return redirect(url_for('recipe_new'))
+    except Exception:
+        flash('Could not fetch recipe from that URL. Please check the URL and try again.')
+        return redirect(url_for('recipe_new'))
+
+    # Store scraped data in session for the form
+    from flask import session
+    session['import_data'] = data
+    return redirect(url_for('recipe_new', from_import='1'))
+
+
 @app.route('/recipe/new', methods=['GET', 'POST'])
 def recipe_new():
     if request.method == 'POST':
         return save_recipe(None)
+
+    # Check for imported data
+    from flask import session
+    import_data = None
+    if request.args.get('from_import'):
+        import_data = session.pop('import_data', None)
+
+    if import_data:
+        return render_template('recipe_form.html', recipe=None,
+                               ingredients_text='\n'.join(import_data.get('ingredients', [])),
+                               steps_text='\n'.join(import_data.get('steps', [])),
+                               tags_text=', '.join(import_data.get('tags', [])),
+                               import_data=import_data)
+
     return render_template('recipe_form.html', recipe=None, ingredients_text='',
-                           steps_text='', tags_text='')
+                           steps_text='', tags_text='', import_data=None)
 
 
 @app.route('/recipe/<int:recipe_id>')
@@ -403,6 +441,16 @@ def save_recipe(recipe_id):
             'INSERT OR IGNORE INTO recipe_tag (recipe_id, tag_id) VALUES (?, ?)',
             (recipe_id, tag_id)
         )
+
+    # Handle imported photo (from URL scraper)
+    imported_photo = request.form.get('imported_photo', '').strip()
+    if imported_photo:
+        photo_path = os.path.join(PHOTO_DIR, imported_photo)
+        if os.path.exists(photo_path):
+            db.execute(
+                'INSERT INTO photo (recipe_id, filename, caption, is_primary) VALUES (?, ?, ?, ?)',
+                (recipe_id, imported_photo, '', 1)
+            )
 
     db.commit()
     flash('Recipe saved!')
@@ -1231,6 +1279,41 @@ def gift_hamper_delete(hamper_id):
     db.commit()
     flash('Gift list deleted.')
     return redirect(url_for('gift_list'))
+
+
+# ── Brain Dump ───────────────────────────────────────────────────────────────
+
+@app.route('/braindump')
+def braindump():
+    db = get_db()
+    # Auto-create table if it doesn't exist yet
+    db.execute('''CREATE TABLE IF NOT EXISTS braindump (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    notes = db.execute('SELECT * FROM braindump ORDER BY created_at DESC').fetchall()
+    return render_template('braindump.html', notes=notes)
+
+
+@app.route('/braindump/add', methods=['POST'])
+def braindump_add():
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Note cannot be empty.')
+        return redirect(url_for('braindump'))
+    db = get_db()
+    db.execute('INSERT INTO braindump (content) VALUES (?)', (content,))
+    db.commit()
+    return redirect(url_for('braindump'))
+
+
+@app.route('/braindump/<int:note_id>/delete', methods=['POST'])
+def braindump_delete(note_id):
+    db = get_db()
+    db.execute('DELETE FROM braindump WHERE id = ?', (note_id,))
+    db.commit()
+    return redirect(url_for('braindump'))
 
 
 # ── PWA service-worker (must be served from root scope) ───────────────────────

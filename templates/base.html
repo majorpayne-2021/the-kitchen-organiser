@@ -27,6 +27,7 @@
                 <a href="{{ url_for('meal_plan_list') }}" {% if request.endpoint == 'meal_plan_list' %}class="active"{% endif %}>Meal Plans</a>
                 <a href="{{ url_for('event_plan_list') }}" {% if request.endpoint == 'event_plan_list' %}class="active"{% endif %}>Event Plans</a>
                 <a href="{{ url_for('gift_list') }}" {% if request.endpoint == 'gift_list' %}class="active"{% endif %}>Gift Ideas</a>
+                <a href="{{ url_for('braindump') }}" {% if request.endpoint == 'braindump' %}class="active"{% endif %}>Brain Dump</a>
             </div>
         </div>
     </nav>

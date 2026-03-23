@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Brain Dump{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Brain Dump</h1>
+</div>
+
+<form method="post" action="{{ url_for('braindump_add') }}" class="braindump-form">
+    <textarea name="content" rows="3" placeholder="Jot down an idea, thought, or note..." required></textarea>
+    <button type="submit">Add Note</button>
+</form>
+
+<div class="braindump-list">
+    {% for note in notes %}
+    <div class="braindump-note">
+        <p>{{ note.content }}</p>
+        <div class="braindump-meta">
+            <small>{{ note.created_at }}</small>
+            <form method="post" action="{{ url_for('braindump_delete', note_id=note.id) }}" style="display:inline;">
+                <button type="submit" class="btn-delete-small" title="Delete">&times;</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p class="empty-state">No notes yet. Start jotting down your ideas!</p>
+    {% endfor %}
+</div>
+{% endblock %}
