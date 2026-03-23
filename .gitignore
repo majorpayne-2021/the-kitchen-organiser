@@ -4,6 +4,7 @@ static/photos/*
 seed/photos/*
 !seed/photos/*.jpg
 !seed/photos/*.jpeg
+.claude/
 __pycache__/
 *.pyc
 .DS_Store

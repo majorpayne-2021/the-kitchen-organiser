@@ -16,7 +16,8 @@ flowchart TB
         subgraph App["The Kitchen Organiser"]
             Flask["Flask\n(app.py)\nHandles all requests"]
             Helpers["Helpers\n(helpers.py)\nIngredient parsing\nGrocery aggregation\nRecipe search"]
-            Templates["Jinja2 Templates\n(templates/)\n12 HTML files"]
+            Scraper["Scraper\n(scraper.py)\nURL recipe import\nSchema.org + YouTube"]
+            Templates["Jinja2 Templates\n(templates/)"]
         end
 
         SQLite["SQLite Database\n(recipes.db)\nRecipes, ingredients,\nmeal plans, gifts"]
@@ -28,6 +29,9 @@ flowchart TB
     Browser -->|"HTTP request\n(e.g. GET /recipes)"| Flask
     Flask -->|"HTML response"| Browser
     Flask --> Helpers
+    Flask --> Scraper
+    Scraper -->|"Fetch recipe pages"| Internet["External Websites\n(Recipe sites, YouTube)"]
+    Scraper -->|"Download + thumbnail"| Pillow
     Flask --> Templates
     Flask -->|"Read/write data"| SQLite
     Flask -->|"Save/serve images"| Photos
@@ -369,7 +373,26 @@ It's the native macOS solution — no additional software to install, reliable, 
 
 ---
 
-## 10. Single-File Application Structure
+## 10. Recipe URL Import via Schema.org and YouTube Scraping
+
+**What it is:** When creating a new recipe, you can paste a URL from a recipe website or YouTube video. The app fetches the page, extracts the recipe data, and pre-fills the form for review before saving.
+
+**Why Schema.org JSON-LD?**
+Most major recipe websites (RecipeTinEats, AllRecipes, BBC Good Food, Serious Eats, etc.) embed structured recipe data using the Schema.org `Recipe` type in JSON-LD format. This is the same data Google uses to display rich recipe cards in search results, so it's reliably present and well-maintained. Parsing this structured data is far more reliable than scraping HTML elements, which vary across sites.
+
+**Why YouTube description parsing?**
+Many recipe YouTubers include the full recipe in the video description. Extracting this text and splitting on common headers ("Ingredients", "Instructions") is a simple heuristic that avoids the complexity and cost of video transcription or AI-based extraction.
+
+**What was considered:**
+- **Dedicated recipe scraping library (`recipe-scrapers`)** — a Python library with site-specific parsers for 100+ recipe sites. More robust for edge cases, but adds a heavyweight dependency with frequent updates needed as sites change. Schema.org JSON-LD provides a single, standards-based approach that works across sites without site-specific code.
+- **AI/LLM-based extraction** — could handle unstructured pages more flexibly, but adds an external API dependency, cost, and latency. Unnecessary when the structured data is already there.
+- **Video transcription (Whisper)** — would enable importing from videos without recipe descriptions, but adds a large dependency (~1GB model) for a niche use case.
+
+**Trade-off accepted:** Sites without Schema.org markup won't work, and YouTube videos without recipes in the description will only import the title and thumbnail. In practice, the vast majority of recipe content falls into the supported formats.
+
+---
+
+## 11. Single-File Application Structure
 
 **What it is:** All 57 route handlers live in a single file (`app.py`), with helper functions separated into `helpers.py`.
 

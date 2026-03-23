@@ -13,6 +13,7 @@
 
 **Recipe Management**
 - Create, edit, and delete recipes with ingredients, steps, photos, and notes
+- **Import from URL** — paste a link from recipe websites (e.g. RecipeTinEats) or YouTube videos and auto-fill the recipe form with title, ingredients, steps, times, tags, and photo
 - Upload multiple photos per recipe with automatic thumbnail generation
 - Tag-based organisation and full-text search
 - "What Can I Make?" — search by ingredients you have on hand, ranked by match percentage
@@ -65,6 +66,7 @@
 | Frontend  | **HTMX 2.0** | Adds dynamic behaviour (click-to-edit, inline forms) without writing a JavaScript framework or SPA |
 | Styling   | **Vanilla CSS** with CSS custom properties | Full control over the design system without build tools or CSS framework dependencies |
 | Images    | **Pillow** | Server-side thumbnail generation to keep page loads fast |
+| Scraping  | **requests** + **BeautifulSoup4** | Recipe URL import from websites and YouTube |
 | Process   | **launchd** (macOS Launch Agent) | Auto-starts the server at login and restarts on crash — no manual intervention needed |
 
 ## Getting Started
@@ -114,9 +116,10 @@ This starts the app at login and restarts it automatically if it crashes.
 
 ```
 the-kitchen-organiser/
-├── app.py               # Application routes and request handlers (57 endpoints)
+├── app.py               # Application routes and request handlers
 ├── helpers.py           # Ingredient parsing, grocery aggregation, recipe search
-├── schema.sql           # Database schema (14 tables)
+├── scraper.py           # Recipe URL import — Schema.org and YouTube scraping
+├── schema.sql           # Database schema
 ├── recipes.db           # SQLite database (not committed)
 ├── environment.yml      # Conda environment specification
 ├── static/
