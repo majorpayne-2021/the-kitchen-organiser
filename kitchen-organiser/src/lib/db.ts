@@ -1,11 +1,18 @@
-import { PrismaClient } from "@/generated/prisma";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import path from "path";
 
 function createPrismaClient() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
 
-  const adapter = new PrismaLibSql({ url });
+  // DATABASE_URL is expected to be "file:./dev.db" or "file:/absolute/path/to/db"
+  const dbPath = url.replace(/^file:/, "");
+  const resolvedPath = path.isAbsolute(dbPath)
+    ? dbPath
+    : path.resolve(process.cwd(), dbPath);
+
+  const adapter = new PrismaBetterSqlite3({ url: resolvedPath });
   return new PrismaClient({ adapter });
 }
 

@@ -9,7 +9,7 @@ import type {
   GiftHamper,
   GiftHamperItem,
   User,
-} from "@/generated/prisma";
+} from "@prisma/client";
 
 export type RecipeWithRelations = Recipe & {
   ingredients: Ingredient[];

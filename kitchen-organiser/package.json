@@ -11,9 +11,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.2",
-    "@prisma/adapter-libsql": "^7.5.0",
+    "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "better-sqlite3": "^12.8.0",
     "cheerio": "^1.2.0",
     "next": "16.2.1",
     "prisma": "^7.5.0",
@@ -35,7 +35,6 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.1",
-    "better-sqlite3": "^12.8.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "jsdom": "^29.0.1",
