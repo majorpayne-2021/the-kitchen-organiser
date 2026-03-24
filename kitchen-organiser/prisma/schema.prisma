@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id             Int          @id @default(autoincrement())
+  name           String
+  avatarFilename String?
+  createdAt      DateTime     @default(now())
+  cookingLogs    CookingLog[]
+}
+
+model CookingLog {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  recipeId Int
+  cookedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model Recipe {
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String?
+  prepTime      Int?
+  cookTime      Int?
+  servings      Int?
+  source        String?
+  steps         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ingredients   Ingredient[]
+  photos        Photo[]
+  notes         Note[]
+  tags          RecipeTag[]
+  mealPlanItems MealPlanItem[]
+  cookingLogs   CookingLog[]
+}
+
+model Ingredient {
+  id              Int     @id @default(autoincrement())
+  recipeId        Int
+  name            String
+  quantity        Float?
+  unit            String?
+  groceryCategory String?
+  sortOrder       Int     @default(0)
+  recipe          Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id      Int         @id @default(autoincrement())
+  name    String      @unique
+  recipes RecipeTag[]
+}
+
+model RecipeTag {
+  recipeId Int
+  tagId    Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([recipeId, tagId])
+}
+
+model Photo {
+  id        Int      @id @default(autoincrement())
+  recipeId  Int
+  filename  String
+  caption   String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  recipeId  Int
+  content   String
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model MealPlan {
+  id          Int               @id @default(autoincrement())
+  name        String
+  planType    String            @default("weekly")
+  eventDate   String?
+  eventTime   String?
+  createdAt   DateTime          @default(now())
+  items       MealPlanItem[]
+  dayNotes    MealPlanDayNote[]
+  eventNotes  EventNote[]
+  eventPhotos EventPhoto[]
+  invitees    EventInvitee[]
+}
+
+model MealPlanItem {
+  id               Int      @id @default(autoincrement())
+  mealPlanId       Int
+  recipeId         Int?
+  freeText         String?
+  slotLabel        String
+  servingsOverride Int?
+  sortOrder        Int      @default(0)
+  mealPlan         MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe           Recipe?  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model MealPlanDayNote {
+  id         Int      @id @default(autoincrement())
+  mealPlanId Int
+  day        String
+  content    String
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+}
+
+model EventNote {
+  id         Int      @id @default(autoincrement())
+  mealPlanId Int
+  content    String
+  createdAt  DateTime @default(now())
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+}
+
+model EventPhoto {
+  id         Int      @id @default(autoincrement())
+  mealPlanId Int
+  filename   String
+  caption    String?
+  createdAt  DateTime @default(now())
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+}
+
+model EventInvitee {
+  id         Int      @id @default(autoincrement())
+  mealPlanId Int
+  name       String
+  inviteSent Boolean  @default(false)
+  rsvp       String   @default("pending")
+  dietary    String?
+  createdAt  DateTime @default(now())
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+}
+
+model GiftHamper {
+  id        Int              @id @default(autoincrement())
+  title     String
+  giftDate  String?
+  createdAt DateTime         @default(now())
+  items     GiftHamperItem[]
+  photos    GiftPhoto[]
+}
+
+model GiftHamperItem {
+  id          Int        @id @default(autoincrement())
+  hamperId    Int
+  description String
+  checked     Boolean    @default(false)
+  note        String?
+  sortOrder   Int        @default(0)
+  hamper      GiftHamper @relation(fields: [hamperId], references: [id], onDelete: Cascade)
+}
+
+model GiftPhoto {
+  id        Int        @id @default(autoincrement())
+  hamperId  Int
+  filename  String
+  caption   String?
+  createdAt DateTime   @default(now())
+  hamper    GiftHamper @relation(fields: [hamperId], references: [id], onDelete: Cascade)
+}
+
+model Braindump {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+}

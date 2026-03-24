@@ -53,3 +53,5 @@ public/avatars/*
 # Environment
 .env
 .env.local
+
+/src/generated/prisma
