@@ -8,11 +8,11 @@ const PHOTO_DIR = path.join(process.cwd(), "public", "photos");
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
-  const recipeId = parseInt(String(formData.get("recipeId")), 10);
+  const type = String(formData.get("type") || "recipe");
 
-  if (!file || isNaN(recipeId)) {
+  if (!file) {
     return NextResponse.json(
-      { error: "Missing file or recipeId" },
+      { error: "Missing file" },
       { status: 400 }
     );
   }
@@ -27,6 +27,47 @@ export async function POST(request: NextRequest) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const filename = await processAndSavePhoto(buffer, ext, PHOTO_DIR);
+
+  if (type === "event") {
+    const mealPlanId = parseInt(String(formData.get("mealPlanId")), 10);
+    if (isNaN(mealPlanId)) {
+      return NextResponse.json(
+        { error: "Missing mealPlanId" },
+        { status: 400 }
+      );
+    }
+
+    const photo = await prisma.eventPhoto.create({
+      data: { mealPlanId, filename },
+    });
+
+    return NextResponse.json({ photo });
+  }
+
+  if (type === "gift") {
+    const hamperId = parseInt(String(formData.get("hamperId")), 10);
+    if (isNaN(hamperId)) {
+      return NextResponse.json(
+        { error: "Missing hamperId" },
+        { status: 400 }
+      );
+    }
+
+    const photo = await prisma.giftPhoto.create({
+      data: { hamperId, filename },
+    });
+
+    return NextResponse.json({ photo });
+  }
+
+  // Default: recipe photo
+  const recipeId = parseInt(String(formData.get("recipeId")), 10);
+  if (isNaN(recipeId)) {
+    return NextResponse.json(
+      { error: "Missing recipeId" },
+      { status: 400 }
+    );
+  }
 
   // Check if this is the first photo for the recipe
   const existingCount = await prisma.photo.count({

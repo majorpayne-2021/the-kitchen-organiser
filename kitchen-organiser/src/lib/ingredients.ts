@@ -1,4 +1,5 @@
-import type { ParsedIngredient } from "@/types";
+import type { ParsedIngredient, IngredientSearchResult } from "@/types";
+import { prisma } from "@/lib/db";
 
 const UNITS = [
   "tablespoons", "tablespoon", "tbsp", "tbs",
@@ -144,4 +145,43 @@ export function guessCategory(ingredientName: string): string {
     if (key.includes(nameLower) || nameLower.includes(key)) return cat;
   }
   return "other";
+}
+
+export async function searchByIngredients(
+  ingredientNames: string[]
+): Promise<IngredientSearchResult[]> {
+  const searchTerms = ingredientNames.map((n) => n.toLowerCase().trim()).filter(Boolean);
+  if (!searchTerms.length) return [];
+
+  const recipes = await prisma.recipe.findMany({
+    include: { ingredients: true },
+    orderBy: { title: "asc" },
+  });
+
+  const results: IngredientSearchResult[] = [];
+  for (const recipe of recipes) {
+    const ingredientNamesList = recipe.ingredients.map((i) => i.name.toLowerCase());
+    const matched: string[] = [];
+    for (const term of searchTerms) {
+      for (const ingName of ingredientNamesList) {
+        if (ingName.includes(term) || term.includes(ingName)) {
+          matched.push(ingName.charAt(0).toUpperCase() + ingName.slice(1));
+          break;
+        }
+      }
+    }
+    if (!matched.length) continue;
+    const missing = ingredientNamesList
+      .filter((name) => !matched.map((m) => m.toLowerCase()).includes(name))
+      .map((n) => n.charAt(0).toUpperCase() + n.slice(1));
+    const total = ingredientNamesList.length || 1;
+    results.push({
+      recipe,
+      matched,
+      missing,
+      matchPct: Math.round((matched.length / total) * 100),
+    });
+  }
+  results.sort((a, b) => b.matchPct - a.matchPct);
+  return results;
 }
