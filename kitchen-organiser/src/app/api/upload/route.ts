@@ -4,6 +4,7 @@ import { isAllowedExtension, processAndSavePhoto } from "@/lib/photos";
 import path from "path";
 
 const PHOTO_DIR = path.join(process.cwd(), "public", "photos");
+const AVATAR_DIR = path.join(process.cwd(), "public", "avatars");
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -26,6 +27,12 @@ export async function POST(request: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (type === "avatar") {
+    const filename = await processAndSavePhoto(buffer, ext, AVATAR_DIR);
+    return NextResponse.json({ filename });
+  }
+
   const filename = await processAndSavePhoto(buffer, ext, PHOTO_DIR);
 
   if (type === "event") {

@@ -1,0 +1,13 @@
+services:
+  kitchen-organiser:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/kitchen.db:/app/prisma/prod.db
+      - ./data/photos:/app/public/photos
+      - ./data/avatars:/app/public/avatars
+    environment:
+      - DATABASE_URL=file:/app/prisma/prod.db
+      - NODE_ENV=production
+    restart: unless-stopped
