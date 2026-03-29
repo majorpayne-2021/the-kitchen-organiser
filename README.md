@@ -2,8 +2,6 @@
 
 A household kitchen management app for recipes, meal planning, events, gift hampers, and grocery lists. Built for a two-person household (Jennifer & Matus) and deployed on a homelab via Docker.
 
-Rebuilt from a Flask/Python app to Next.js/React/TypeScript.
-
 ## Features
 
 - **Recipes** — Create, edit, search, tag, and import from URLs (Schema.org scraping). Multiple photos per recipe with auto-generated thumbnails.
@@ -44,16 +42,6 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
-
-### Migrating Data from the Flask App
-
-If you have the old database and photos in `previous/`:
-
-```bash
-npx tsx scripts/migrate-data.ts
-```
-
-This imports recipes, ingredients, photos, tags, meal plans, events, gift hampers, and braindump entries into the dev database.
 
 ## Data Layout
 
@@ -116,7 +104,7 @@ prisma/
 └── migrations/             # Schema migrations
 
 .devcontainer/              # VS Code dev container config
-scripts/                    # Data migration from Flask app
+scripts/                    # Utility scripts
 __tests__/                  # Vitest test suites
 ```
 

@@ -1,3 +1,6 @@
+# USER
+CLAUDE.md
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -66,8 +69,3 @@ public/avatars/*
 # Production data (database + photos, mounted by docker-compose)
 /data/
 
-# Original app reference data (gitignored separately)
-resources/
-
-# Previous app data for migration
-/previous/
