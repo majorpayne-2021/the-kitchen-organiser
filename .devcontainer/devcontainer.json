@@ -1,0 +1,16 @@
+{
+  "name": "Kitchen Organiser Dev",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "target": "base"
+  },
+  "forwardPorts": [3000],
+  "postCreateCommand": "sh .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "sh"
+      }
+    }
+  }
+}

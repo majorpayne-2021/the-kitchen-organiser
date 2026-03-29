@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # Kitchen Organiser — Rebuild Project
 
 ## What This Project Is
