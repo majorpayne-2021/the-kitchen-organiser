@@ -17,9 +17,12 @@
         <p>{{ note.content }}</p>
         <div class="braindump-meta">
             <small>{{ note.created_at }}</small>
-            <form method="post" action="{{ url_for('braindump_delete', note_id=note.id) }}" style="display:inline;">
-                <button type="submit" class="btn-delete-small" title="Delete">&times;</button>
-            </form>
+            <div>
+                <a href="{{ url_for('braindump_edit', note_id=note.id) }}" class="btn-edit-small" title="Edit">&#9998;</a>
+                <form method="post" action="{{ url_for('braindump_delete', note_id=note.id) }}" style="display:inline;">
+                    <button type="submit" class="btn-delete-small" title="Delete">&times;</button>
+                </form>
+            </div>
         </div>
     </div>
     {% else %}

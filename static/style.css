@@ -1159,6 +1159,20 @@ th {
     color: var(--color-text-light);
 }
 
+.btn-edit-small {
+    background: none;
+    border: none;
+    color: var(--color-text-light);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 0.3rem;
+    text-decoration: none;
+}
+
+.btn-edit-small:hover {
+    color: var(--color-accent);
+}
+
 .btn-delete-small {
     background: none;
     border: none;
@@ -1171,6 +1185,16 @@ th {
 
 .btn-delete-small:hover {
     color: #c44;
+}
+
+.gift-notes-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.gift-notes-section h3 {
+    margin-bottom: 0.75rem;
 }
 
 /* ── Details/Summary ─────────────────────────────────────────────────────── */

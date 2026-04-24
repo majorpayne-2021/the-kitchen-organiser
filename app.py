@@ -1134,6 +1134,14 @@ def gift_list():
 @app.route('/gift/<int:hamper_id>')
 def gift_detail(hamper_id):
     db = get_db()
+    # Auto-create gift_note table if it doesn't exist yet
+    db.execute('''CREATE TABLE IF NOT EXISTS gift_note (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hamper_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (hamper_id) REFERENCES gift_hamper(id) ON DELETE CASCADE
+    )''')
     hamper = db.execute('SELECT * FROM gift_hamper WHERE id = ?', (hamper_id,)).fetchone()
     if hamper is None:
         flash('Gift list not found.')
@@ -1142,8 +1150,53 @@ def gift_detail(hamper_id):
     photos = db.execute(
         'SELECT * FROM gift_photo WHERE hamper_id = ? ORDER BY created_at', (hamper_id,)
     ).fetchall()
+    notes = db.execute(
+        'SELECT * FROM gift_note WHERE hamper_id = ? ORDER BY created_at DESC', (hamper_id,)
+    ).fetchall()
     return render_template('gift_detail.html', hamper=hamper, items=items,
-                           total=total, done=done, photos=photos)
+                           total=total, done=done, photos=photos, notes=notes)
+
+
+@app.route('/gift/<int:hamper_id>/note/add', methods=['POST'])
+def gift_note_add(hamper_id):
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Note cannot be empty.')
+        return redirect(url_for('gift_detail', hamper_id=hamper_id))
+    db = get_db()
+    db.execute('INSERT INTO gift_note (hamper_id, content) VALUES (?, ?)', (hamper_id, content))
+    db.commit()
+    return redirect(url_for('gift_detail', hamper_id=hamper_id))
+
+
+@app.route('/gift/note/<int:note_id>/edit', methods=['GET', 'POST'])
+def gift_note_edit(note_id):
+    db = get_db()
+    note = db.execute('SELECT * FROM gift_note WHERE id = ?', (note_id,)).fetchone()
+    if note is None:
+        flash('Note not found.')
+        return redirect(url_for('gift_list'))
+
+    if request.method == 'POST':
+        content = request.form.get('content', '').strip()
+        if not content:
+            flash('Note cannot be empty.')
+            return redirect(url_for('gift_detail', hamper_id=note['hamper_id']))
+        db.execute('UPDATE gift_note SET content = ? WHERE id = ?', (content, note_id))
+        db.commit()
+        return redirect(url_for('gift_detail', hamper_id=note['hamper_id']))
+
+    return render_template('gift_note_edit.html', note=note)
+
+
+@app.route('/gift/note/<int:note_id>/delete', methods=['POST'])
+def gift_note_delete(note_id):
+    db = get_db()
+    note = db.execute('SELECT * FROM gift_note WHERE id = ?', (note_id,)).fetchone()
+    hamper_id = note['hamper_id'] if note else None
+    db.execute('DELETE FROM gift_note WHERE id = ?', (note_id,))
+    db.commit()
+    return redirect(url_for('gift_detail', hamper_id=hamper_id) if hamper_id else url_for('gift_list'))
 
 
 @app.route('/gift/new', methods=['POST'])
@@ -1306,6 +1359,25 @@ def braindump_add():
     db.execute('INSERT INTO braindump (content) VALUES (?)', (content,))
     db.commit()
     return redirect(url_for('braindump'))
+
+
+@app.route('/braindump/<int:note_id>/edit', methods=['GET', 'POST'])
+def braindump_edit(note_id):
+    db = get_db()
+    if request.method == 'POST':
+        content = request.form.get('content', '').strip()
+        if not content:
+            flash('Note cannot be empty.')
+            return redirect(url_for('braindump'))
+        db.execute('UPDATE braindump SET content = ? WHERE id = ?', (content, note_id))
+        db.commit()
+        return redirect(url_for('braindump'))
+
+    note = db.execute('SELECT * FROM braindump WHERE id = ?', (note_id,)).fetchone()
+    if note is None:
+        flash('Note not found.')
+        return redirect(url_for('braindump'))
+    return render_template('braindump_edit.html', note=note)
 
 
 @app.route('/braindump/<int:note_id>/delete', methods=['POST'])

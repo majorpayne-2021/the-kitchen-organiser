@@ -15,6 +15,31 @@
     </form>
 </div>
 
+<!-- Notes -->
+<h3>Notes</h3>
+<form method="post" action="{{ url_for('gift_note_add', hamper_id=hamper.id) }}" class="braindump-form">
+    <textarea name="content" rows="2" placeholder="Add a note..." required></textarea>
+    <button type="submit">Add Note</button>
+</form>
+{% if notes %}
+<div class="braindump-list">
+    {% for note in notes %}
+    <div class="braindump-note">
+        <p>{{ note.content }}</p>
+        <div class="braindump-meta">
+            <small>{{ note.created_at }}</small>
+            <div>
+                <a href="{{ url_for('gift_note_edit', note_id=note.id) }}" class="btn-edit-small" title="Edit">&#9998;</a>
+                <form method="post" action="{{ url_for('gift_note_delete', note_id=note.id) }}" style="display:inline;">
+                    <button type="submit" class="btn-delete-small" title="Delete">&times;</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <div class="event-stats" style="margin-bottom:1.5rem;">
     <div class="event-stat">
         <span class="card-number">{{ total }}</span>

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Edit Gift Note{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('gift_detail', hamper_id=note.hamper_id) }}" class="back-link">&larr; Back to Gift</a>
+<div class="page-header">
+    <h1>Edit Note</h1>
+</div>
+
+<form method="post" class="braindump-form">
+    <textarea name="content" rows="5" required>{{ note.content }}</textarea>
+    <div class="form-actions">
+        <button type="submit">Save</button>
+        <a href="{{ url_for('gift_detail', hamper_id=note.hamper_id) }}" class="btn btn-outline">Cancel</a>
+    </div>
+</form>
+{% endblock %}
