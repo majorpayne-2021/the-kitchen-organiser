@@ -195,7 +195,8 @@ function toggleDayNote(day) {
                            onchange="this.form.submit()" style="accent-color: var(--color-accent);">
                 </td>
                 <td>
-                    <select name="rsvp" onchange="this.form.submit()" style="min-width:130px;">
+                    <select name="rsvp" onchange="this.form.submit()" style="min-width:130px;"
+                            class="rsvp-select rsvp-{{ inv.rsvp|replace(' ', '-') }}">
                         <option value="pending" {{ 'selected' if inv.rsvp == 'pending' }}>Pending</option>
                         <option value="attending" {{ 'selected' if inv.rsvp == 'attending' }}>Attending</option>
                         <option value="not attending" {{ 'selected' if inv.rsvp == 'not attending' }}>Not Attending</option>
@@ -236,6 +237,7 @@ function toggleDayNote(day) {
         <button type="submit" class="note-remove" onclick="return confirm('Delete this note?')">&#215;</button>
     </form>
     <span class="note-content">{{ note.content }}</span>
+    <a href="{{ url_for('event_note_edit', note_id=note.id) }}" class="note-remove" title="Edit">&#9998;</a>
     <small class="note-date">{{ note.created_at }}</small>
 </div>
 {% endfor %}

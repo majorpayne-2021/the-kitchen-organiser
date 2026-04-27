@@ -49,10 +49,109 @@
     <footer>
         <small>The Kitchen Organiser</small>
     </footer>
+
+    <div id="lightbox" class="lightbox" hidden>
+        <img id="lightbox-img" alt="">
+    </div>
+
     <script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
     }
+
+    // Preserve scroll position across same-page form submits.
+    // Save on any change/click/submit (covers programmatic form.submit() too),
+    // restore once the page is fully laid out.
+    (function () {
+        const key = 'scrollY:' + location.pathname;
+
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
+        function save() {
+            sessionStorage.setItem(key, String(window.scrollY));
+        }
+
+        document.addEventListener('change', save, true);
+        document.addEventListener('submit', save, true);
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('button')) save();
+        }, true);
+        window.addEventListener('pagehide', save);
+
+        function restore() {
+            const y = sessionStorage.getItem(key);
+            if (y === null) return;
+            sessionStorage.removeItem(key);
+            const target = parseInt(y, 10);
+
+            // Hide body briefly to avoid a flash before scroll lands.
+            // Failsafe reveal after 800ms in case target is unreachable.
+            document.body.style.visibility = 'hidden';
+            let revealed = false;
+            function reveal() {
+                if (revealed) return;
+                document.body.style.visibility = '';
+                revealed = true;
+            }
+            setTimeout(reveal, 800);
+
+            let attempts = 0;
+            let lastHeight = -1;
+            let stableSince = 0;
+            function tryScroll() {
+                window.scrollTo({ top: target, left: 0, behavior: 'instant' });
+                attempts++;
+                const docHeight = document.documentElement.scrollHeight;
+                const reached = Math.abs(window.scrollY - target) <= 5;
+                if (reached) reveal();
+                if (docHeight === lastHeight) {
+                    stableSince += 50;
+                } else {
+                    stableSince = 0;
+                    lastHeight = docHeight;
+                }
+                const heightSettled = stableSince >= 600;
+                if ((!reached || !heightSettled) && attempts < 100) {
+                    setTimeout(tryScroll, 50);
+                }
+            }
+            tryScroll();
+        }
+
+        // Run restore immediately so the first paint happens at the right
+        // scroll position (no flicker). The retry loop inside handles the
+        // page growing as lazy images load.
+        restore();
+    })();
+
+    (function () {
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+
+        document.addEventListener('click', function (e) {
+            const img = e.target.closest('.photo-gallery img');
+            if (img) {
+                lightboxImg.src = img.src;
+                lightboxImg.alt = img.alt;
+                lightbox.hidden = false;
+                document.body.style.overflow = 'hidden';
+            } else if (e.target === lightbox || e.target === lightboxImg) {
+                lightbox.hidden = true;
+                lightboxImg.src = '';
+                document.body.style.overflow = '';
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !lightbox.hidden) {
+                lightbox.hidden = true;
+                lightboxImg.src = '';
+                document.body.style.overflow = '';
+            }
+        });
+    })();
     </script>
 </body>
 </html>

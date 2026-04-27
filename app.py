@@ -1080,6 +1080,26 @@ def event_note_add(plan_id):
     return redirect(url_for('plan_detail', plan_id=plan_id))
 
 
+@app.route('/event-note/<int:note_id>/edit', methods=['GET', 'POST'])
+def event_note_edit(note_id):
+    db = get_db()
+    note = db.execute('SELECT * FROM event_note WHERE id = ?', (note_id,)).fetchone()
+    if note is None:
+        flash('Note not found.')
+        return redirect(url_for('event_plan_list'))
+
+    if request.method == 'POST':
+        content = request.form.get('content', '').strip()
+        if not content:
+            flash('Note cannot be empty.')
+            return redirect(url_for('plan_detail', plan_id=note['meal_plan_id']))
+        db.execute('UPDATE event_note SET content = ? WHERE id = ?', (content, note_id))
+        db.commit()
+        return redirect(url_for('plan_detail', plan_id=note['meal_plan_id']))
+
+    return render_template('event_note_edit.html', note=note)
+
+
 @app.route('/event-note/<int:note_id>/delete', methods=['POST'])
 def event_note_delete(note_id):
     db = get_db()
